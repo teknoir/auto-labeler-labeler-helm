@@ -1,0 +1,12 @@
+---
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: vision-dataset-curation
+  namespace: demonstrations
+spec:
+  repo: https://teknoir.github.io/vision-dataset-curation-helm
+  chart: vision-dataset-curation
+  targetNamespace: demonstrations
+  valuesContent: |-
+    # Example for minimal configuration

@@ -1,0 +1,35 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vdc-mongodb
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: vdc-mongodb
+spec:
+  type: ClusterIP
+  selector:
+    app: vdc-mongodb
+  ports:
+    - name: mongodb
+      port: 27017
+      targetPort: mongodb
+
+---
+{{- if .Values.mongoExpress.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: vdc-mongo-express
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: vdc-mongo-express
+spec:
+  type: ClusterIP
+  selector:
+    app: vdc-mongo-express
+  ports:
+    - name: mongo-express
+      port: 80
+      targetPort: mongo-express
+{{- end }}

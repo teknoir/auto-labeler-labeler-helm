@@ -1,0 +1,1 @@
+* MongoDB is installed in the namespace: {{ $.Release.Namespace }} as mongodb

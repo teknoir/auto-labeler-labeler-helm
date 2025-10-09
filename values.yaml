@@ -1,0 +1,3 @@
+## Set default rootUser, rootPassword
+rootUser: "teknoir"
+rootPassword: "teknoir123456!"
