@@ -7,6 +7,7 @@ metadata:
 spec:
   repo: https://teknoir.github.io/vision-dataset-curation-helm
   chart: vision-dataset-curation
+  version: 0.0.0-alpha.3
   targetNamespace: demonstrations
   valuesContent: |-
     # Example for minimal configuration
