@@ -22,6 +22,7 @@ spec:
       labels:
         app: vdc
     spec:
+      serviceAccountName: default-editor
       containers:
         - name: vdc
           image: "{{ .Values.vdc.image.repository }}:{{ .Values.vdc.image.tag }}"
