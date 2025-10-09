@@ -1,9 +1,31 @@
-# MongoDB Helm Chart
+# Vision Dataset Curation Helm Chart
 
 This chart deploys Vision Dataset Curation application to a Kubernetes cluster.
 
 > The implementation of the Helm chart is right now the bare minimum to get it to work.
 > The purpouse of the chart is not to be infinitely configurable, but to provide a limited set of configuration options that make sense for the Teknoir platform.
+
+# For Chip
+
+## Build the VDC Docker image
+
+```bash
+./build.sh
+```
+Follow instructions...
+
+## Deploy the VDC application
+
+```bash
+./deploy.sh
+```
+
+## Browse
+
+https://teknoir.cloud/victra-poc/vision-dataset-curation
+
+
+# Regular Helm usage
 
 ## Usage in Teknoir platform
 Use the HelmChart to deploy the Vision Dataset Curation application to a Namespace.
