@@ -15,4 +15,4 @@ spec:
     vdc:
       image:
         repository: us-docker.pkg.dev/teknoir/gcr.io/vdc
-        tag: latest-local-20251009-191003
+        tag: latest-local-20251009-192828

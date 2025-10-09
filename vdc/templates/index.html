@@ -754,6 +754,8 @@
         let datasets = [];
         let currentDataset = null;
         let appConfig = {};
+        let currentGcsPrefix = 'media/';
+        let gcsFiles = [];
 
         // Base URL for API calls (injected from Flask template)
         const BASE_URL = '{{ base_url }}';
@@ -1044,9 +1046,14 @@
         }
 
         // GCS Browser functions
-        async function loadGcsFiles() {
-            const prefix = 'media/';
+        async function loadGcsFiles(prefix = 'media/') {
+            currentGcsPrefix = prefix;
             const container = document.getElementById('gcsFilesContainer');
+            const pathDisplay = document.getElementById('gcsPath');
+
+            if (pathDisplay) {
+                pathDisplay.textContent = appConfig.gcs_bucket ? `${appConfig.gcs_bucket}/${prefix}` : prefix;
+            }
 
             container.innerHTML = '<div class="loading"><div class="spinner"></div><p>Loading files...</p></div>';
 
@@ -1055,7 +1062,8 @@
                 const data = await response.json();
 
                 if (data.success && data.files) {
-                    renderGcsFiles(data.files);
+                    gcsFiles = data.files;
+                    renderGcsFiles(data.files, data.directories || []);
                 } else {
                     container.innerHTML = '<div class="empty-state"><p>No files found or error loading files</p></div>';
                 }
@@ -1065,10 +1073,10 @@
             }
         }
 
-        function renderGcsFiles(files) {
+        function renderGcsFiles(files, directories = []) {
             const container = document.getElementById('gcsFilesContainer');
 
-            if (files.length === 0) {
+            if (files.length === 0 && directories.length === 0) {
                 container.innerHTML = `
                     <div class="empty-state">
                         <svg viewBox="0 0 24 24" fill="currentColor">
@@ -1084,8 +1092,8 @@
             let items = [];
 
             // Add back button if not at root
-            if (currentPrefix && currentPrefix !== 'media/') {
-                const parentPrefix = currentPrefix.split('/').slice(0, -2).join('/') + '/';
+            if (currentGcsPrefix && currentGcsPrefix !== 'media/') {
+                const parentPrefix = currentGcsPrefix.split('/').slice(0, -2).join('/') + '/';
                 items.push(`
                     <div class="browser-item directory" onclick="loadGcsFiles('${parentPrefix}')">
                         <div class="browser-item-icon">⬆️</div>
@@ -1097,7 +1105,7 @@
             // Add directories
             directories.forEach(dir => {
                 // Use full_path if available, otherwise construct it
-                const dirPath = dir.full_path || (currentPrefix + dir.name);
+                const dirPath = dir.full_path || (currentGcsPrefix + dir.name);
                 items.push(`
                     <div class="browser-item directory" onclick="loadGcsFiles('${escapeHtml(dirPath)}')">
                         <div class="browser-item-icon">📁</div>
@@ -1115,13 +1123,6 @@
                 const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp'];
                 const isImage = imageExtensions.some(ext => filename.toLowerCase().endsWith(ext));
 
-                // Debug logging
-                if (isImage) {
-                    console.log('Image file:', filename);
-                    console.log('Media URL:', file.media_url);
-                    console.log('GCS Path:', file.path);
-                }
-
                 if (isImage && file.media_url) {
                     // Show image thumbnail with media service URL
                     items.push(`
@@ -1130,7 +1131,7 @@
                                  src="${file.media_url}"
                                  alt="${escapeHtml(filename)}"
                                  loading="lazy"
-                                 onerror="this.onerror=null; console.error('Failed to load image:', '${file.media_url}'); this.parentElement.querySelector('.browser-item-image').style.display='none'; this.parentElement.querySelector('.browser-item-icon').style.display='flex';">
+                                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                             <div class="browser-item-icon" style="display: none;">🖼️</div>
                             <div class="browser-item-name" title="${escapeHtml(filename)}">${escapeHtml(displayName)}</div>
                         </div>
@@ -1162,7 +1163,7 @@
 
         // Refresh Gcs browser
         function refreshGcsBrowser() {
-            loadGcsFiles();
+            loadGcsFiles(currentGcsPrefix);
         }
 
         // Filter GCS files by search input
