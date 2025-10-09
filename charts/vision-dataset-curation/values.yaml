@@ -5,6 +5,25 @@
 rootUser: "teknoir"
 rootPassword: "teknoir123456!"
 
+## Domain for GCS bucket and media service URLs
+domain: "teknoir.dev"
+
+vdc:
+  # VDC web application container configuration
+  image:
+    repository: us-docker.pkg.dev/teknoir/gcr.io/vdc
+    tag: latest-local-20251009-164204
+    pullPolicy: Always
+
+  # Resource requests and limits
+  resources:
+    requests:
+      memory: 128Mi
+      cpu: 100m
+    limits:
+      memory: 512Mi
+      cpu: 500m
+
 mongodb:
   # MongoDB container configuration
   image:
@@ -18,8 +37,8 @@ mongodb:
       memory: 128Mi
       cpu: 100m
     limits:
-      memory: 1Gi
-      cpu: 1500m
+      memory: 512Mi
+      cpu: 500m
 
 mongoExpress:
   enabled: true
@@ -34,5 +53,6 @@ mongoExpress:
       memory: 128Mi
       cpu: 100m
     limits:
-      memory: 1Gi
-      cpu: 1500m
+      memory: 512Mi
+      cpu: 500m
+

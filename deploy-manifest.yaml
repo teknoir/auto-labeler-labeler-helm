@@ -3,11 +3,15 @@ apiVersion: helm.cattle.io/v1
 kind: HelmChart
 metadata:
   name: vision-dataset-curation
-  namespace: demonstrations
+  namespace: victra-poc
 spec:
   repo: https://teknoir.github.io/vision-dataset-curation-helm
   chart: vision-dataset-curation
-  version: 0.0.0-alpha.3
-  targetNamespace: demonstrations
+  version: 0.0.0-alpha.4
+  targetNamespace: victra-poc
   valuesContent: |-
     # Example for minimal configuration
+    vdc:
+      image:
+        repository: us-docker.pkg.dev/teknoir/gcr.io/vdc
+        tag: latest-local-20251009-164204
