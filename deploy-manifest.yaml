@@ -7,7 +7,7 @@ metadata:
 spec:
   repo: https://teknoir.github.io/vision-dataset-curation-helm
   chart: vision-dataset-curation
-  version: 0.0.0-alpha.6
+  version: 0.0.0-alpha.8
   targetNamespace: victra-poc
   valuesContent: |-
     # Example for minimal configuration
@@ -15,4 +15,4 @@ spec:
     vdc:
       image:
         repository: us-docker.pkg.dev/teknoir/gcr.io/vdc
-        tag: latest-local-20251009-170103
+        tag: latest-local-20251009-191003

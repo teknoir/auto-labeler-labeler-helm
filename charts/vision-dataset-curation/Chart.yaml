@@ -3,5 +3,5 @@ name: vision-dataset-curation
 description: A Helm chart for Teknoir Vision Dataset Curation application
 
 type: application
-version: 0.0.0-alpha.7
+version: 0.0.0-alpha.8
 appVersion: "0.0.1"

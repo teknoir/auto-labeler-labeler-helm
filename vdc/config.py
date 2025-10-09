@@ -19,6 +19,10 @@ class Config:
     MONGO_INITDB_ROOT_USERNAME = os.getenv('MONGO_INITDB_ROOT_USERNAME', 'teknoir')
     MONGO_INITDB_ROOT_PASSWORD = os.getenv('MONGO_INITDB_ROOT_PASSWORD', 'teknoir123456!')
 
+    # Base URL for deployment on specific routes (e.g., '/demonstrations/vision-dataset-curation')
+    # If empty, app will be deployed at root '/'
+    BASE_URL = os.getenv('BASE_URL', '').rstrip('/')
+
     @classmethod
     def get_mongodb_connection_string(cls):
         """Get the full MongoDB connection string."""
@@ -82,3 +86,8 @@ class Config:
 
         # Build media service URL: https://{DOMAIN}/{NAMESPACE}/media-service/api/jpeg/{relative_path}
         return f"https://{cls.DOMAIN}/{cls.NAMESPACE}/media-service/api/jpeg/{relative_path}"
+
+    @classmethod
+    def get_base_url(cls):
+        """Get the base URL for the application."""
+        return cls.BASE_URL

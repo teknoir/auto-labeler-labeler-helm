@@ -53,6 +53,8 @@ spec:
               value: {{ .Release.Namespace | quote }}
             - name: DOMAIN
               value: {{ .Values.domain | default "teknoir.dev" | quote }}
+            - name: BASE_URL
+              value: "/{{ .Release.Namespace }}/vision-dataset-curation"
           resources: {{- toYaml .Values.vdc.resources | nindent 12 }}
 
 ---

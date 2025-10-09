@@ -13,8 +13,6 @@ spec:
   - match:
     - uri:
         prefix: /{{ .Release.Namespace }}/vision-dataset-curation
-    rewrite:
-      uri: /
     route:
     - destination:
         host: vdc.{{ .Release.Namespace }}.svc.cluster.local

@@ -755,16 +755,24 @@
         let currentDataset = null;
         let appConfig = {};
 
+        // Base URL for API calls (injected from Flask template)
+        const BASE_URL = '{{ base_url }}';
+
+        // Helper function to build API URLs
+        function apiUrl(path) {
+            return BASE_URL + path;
+        }
+
         // Load configuration
         async function loadConfig() {
             try {
-                const response = await fetch('/api/config');
+                const response = await fetch(apiUrl('/api/config'));
                 const data = await response.json();
 
                 if (data.success) {
                     appConfig = data.config;
                     document.getElementById('configInfo').innerHTML = `
-                        📦 GCS Bucket: <strong>${appConfig.gcs_bucket}</strong> |
+                        📦 GCS Bucket: <strong>${appConfig.gcs_bucket}</strong>
                         🎬 Media Service: <strong>${appConfig.domain}/${appConfig.namespace}/media-service</strong>
                     `;
                     document.getElementById('gcs-bucket-help').textContent =
@@ -778,7 +786,7 @@
         // Check health status
         async function checkHealth() {
             try {
-                const response = await fetch('/health');
+                const response = await fetch(apiUrl('/health'));
                 const data = await response.json();
                 const healthStatus = document.getElementById('healthStatus');
 
@@ -799,7 +807,7 @@
         // Load datasets
         async function loadDatasets() {
             try {
-                const response = await fetch('/api/datasets');
+                const response = await fetch(apiUrl('/api/datasets'));
                 const data = await response.json();
 
                 if (data.success) {
@@ -862,7 +870,7 @@
             const description = document.getElementById('dataset-description').value;
 
             try {
-                const response = await fetch('/api/datasets', {
+                const response = await fetch(apiUrl('/api/datasets'), {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ name, description })
@@ -887,7 +895,7 @@
             if (!confirm('Are you sure you want to delete this dataset?')) return;
 
             try {
-                const response = await fetch(`/api/datasets/${datasetId}`, {
+                const response = await fetch(apiUrl(`/api/datasets/${datasetId}`), {
                     method: 'DELETE'
                 });
 
@@ -936,7 +944,7 @@
             container.innerHTML = '<div class="loading"><div class="spinner"></div><p>Loading images...</p></div>';
 
             try {
-                const response = await fetch(`/api/datasets/${datasetId}/images`);
+                const response = await fetch(apiUrl(`/api/datasets/${datasetId}/images`));
                 const data = await response.json();
 
                 if (data.success) {
@@ -1006,36 +1014,19 @@
         async function addImage(event) {
             event.preventDefault();
 
-            const datasetId = currentDataset;
-            if (!datasetId) {
+            if (!currentDataset) {
                 showAlert('Please select a dataset first', 'error');
                 return;
             }
 
-            let path = document.getElementById('image-path').value.trim();
-            let filename = document.getElementById('image-filename').value.trim();
-
-            // Validate GCS path
-            if (!path.startsWith('gs://')) {
-                showAlert('GCS path must start with gs://', 'error');
-                return;
-            }
-
-            // Extract filename from path if not provided
-            if (!filename) {
-                const pathParts = path.split('/');
-                filename = pathParts[pathParts.length - 1];
-                if (!filename) {
-                    showAlert('Could not extract filename from path. Please provide a filename.', 'error');
-                    return;
-                }
-            }
+            const path = document.getElementById('image-path').value;
+            const filename = document.getElementById('image-filename').value;
 
             try {
-                const response = await fetch(`/api/datasets/${datasetId}/images`, {
+                const response = await fetch(apiUrl(`/api/datasets/${currentDataset}/images`), {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ filename, path })
+                    body: JSON.stringify({ path, filename })
                 });
 
                 const data = await response.json();
@@ -1052,77 +1043,32 @@
             }
         }
 
-        // Tab switching
-        function switchTab(event, tabName) {
-            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-
-            event.target.classList.add('active');
-            document.getElementById(tabName + '-tab').classList.add('active');
-        }
-
-        // Modal functions
-        function openCreateDatasetModal() {
-            document.getElementById('create-dataset-modal').classList.add('active');
-            document.getElementById('dataset-name').value = '';
-            document.getElementById('dataset-description').value = '';
-        }
-
-        function closeCreateDatasetModal() {
-            document.getElementById('create-dataset-modal').classList.remove('active');
-        }
-
-        function openAddImageModal() {
-            const datasetId = document.getElementById('dataset-select').value;
-            if (!datasetId) {
-                showAlert('Please select a dataset first', 'error');
-                return;
-            }
-            document.getElementById('add-image-modal').classList.add('active');
-            document.getElementById('image-path').value = '';
-            document.getElementById('image-filename').value = '';
-        }
-
-        function closeAddImageModal() {
-            document.getElementById('add-image-modal').classList.remove('active');
-        }
-
-        function openGcsBrowserModal() {
-            document.getElementById('gcs-browser-modal').classList.add('active');
-            loadGcsFiles();
-        }
-
-        function closeGcsBrowserModal() {
-            document.getElementById('gcs-browser-modal').classList.remove('active');
-        }
-
-        // Load GCS files
-        async function loadGcsFiles(prefix = 'media/') {
+        // GCS Browser functions
+        async function loadGcsFiles() {
+            const prefix = 'media/';
             const container = document.getElementById('gcsFilesContainer');
+
             container.innerHTML = '<div class="loading"><div class="spinner"></div><p>Loading files...</p></div>';
 
-            const bucketName = appConfig.gcs_bucket ? appConfig.gcs_bucket.replace('gs://', '') : '';
-            document.getElementById('gcsPath').textContent = `${appConfig.gcs_bucket}/${prefix}`;
-
             try {
-                const response = await fetch(`/api/storage/browse?prefix=${encodeURIComponent(prefix)}&max_results=100`);
+                const response = await fetch(apiUrl(`/api/storage/browse?prefix=${encodeURIComponent(prefix)}&max_results=100`));
                 const data = await response.json();
 
-                if (data.success) {
-                    renderGcsFiles(data.files, data.directories || [], prefix);
+                if (data.success && data.files) {
+                    renderGcsFiles(data.files);
                 } else {
-                    container.innerHTML = `<div class="empty-state"><p>Error loading files: ${data.error}</p></div>`;
+                    container.innerHTML = '<div class="empty-state"><p>No files found or error loading files</p></div>';
                 }
             } catch (error) {
-                container.innerHTML = `<div class="empty-state"><p>Failed to load files: ${error.message}</p></div>`;
+                console.error('Failed to load GCS files:', error);
+                container.innerHTML = '<div class="empty-state"><p>Error loading files</p></div>';
             }
         }
 
-        // Render GCS files
-        function renderGcsFiles(files, directories, currentPrefix) {
+        function renderGcsFiles(files) {
             const container = document.getElementById('gcsFilesContainer');
 
-            if (files.length === 0 && directories.length === 0) {
+            if (files.length === 0) {
                 container.innerHTML = `
                     <div class="empty-state">
                         <svg viewBox="0 0 24 24" fill="currentColor">
@@ -1216,8 +1162,7 @@
 
         // Refresh Gcs browser
         function refreshGcsBrowser() {
-            const currentPath = document.getElementById('gcsPath').textContent.replace(appConfig.gcs_bucket + '/', '');
-            loadGcsFiles(currentPath);
+            loadGcsFiles();
         }
 
         // Filter GCS files by search input
@@ -1235,19 +1180,106 @@
             });
         }
 
-        // Utility function to escape HTML
+        async function searchGcsFiles() {
+            const query = document.getElementById('gcsSearchInput').value.trim();
+            const container = document.getElementById('gcsFilesContainer');
+            container.innerHTML = '<div class="loading"><div class="spinner"></div><p>Searching files...</p></div>';
+
+            if (!query) {
+                loadGcsFiles();
+                return;
+            }
+
+            try {
+                const response = await fetch(apiUrl(`/api/storage/search?query=${encodeURIComponent(query)}`));
+                const data = await response.json();
+
+                if (data.success && data.files) {
+                    renderGcsFiles(data.files);
+                } else {
+                    container.innerHTML = '<div class="empty-state"><p>No files found</p></div>';
+                }
+            } catch (error) {
+                console.error('Failed to search GCS files:', error);
+                container.innerHTML = '<div class="empty-state"><p>Error searching files</p></div>';
+            }
+        }
+
+        // Modal functions
+        function openCreateDatasetModal() {
+            document.getElementById('create-dataset-modal').classList.add('active');
+        }
+
+        function closeCreateDatasetModal() {
+            document.getElementById('create-dataset-modal').classList.remove('active');
+            document.getElementById('create-dataset-form').reset();
+        }
+
+        function openAddImageModal() {
+            if (!currentDataset) {
+                showAlert('Please select a dataset first', 'error');
+                return;
+            }
+            document.getElementById('add-image-modal').classList.add('active');
+        }
+
+        function closeAddImageModal() {
+            document.getElementById('add-image-modal').classList.remove('active');
+            document.getElementById('add-image-form').reset();
+        }
+
+        function openGcsBrowserModal() {
+            document.getElementById('gcs-browser-modal').classList.add('active');
+            loadGcsFiles();
+        }
+
+        function closeGcsBrowserModal() {
+            document.getElementById('gcs-browser-modal').classList.remove('active');
+        }
+
+        // Tab switching
+        function switchTab(event, tabName) {
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+            event.target.classList.add('active');
+            document.getElementById(tabName + '-tab').classList.add('active');
+        }
+
+        // Alert system
+        function showAlert(message, type) {
+            const container = document.getElementById('alert-container');
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type}`;
+            alert.innerHTML = message;
+            container.appendChild(alert);
+
+            setTimeout(() => {
+                container.removeChild(alert);
+            }, 5000);
+        }
+
+        // Utility functions
         function escapeHtml(text) {
-            if (!text) return '';
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
         }
 
-        // Initialize
-        loadConfig();
-        checkHealth();
-        loadDatasets();
-        setInterval(checkHealth, 10000); // Check health every 10 seconds
+        // Initialize app
+        window.addEventListener('DOMContentLoaded', () => {
+            loadConfig();
+            loadDatasets();
+            checkHealth();
+            setInterval(checkHealth, 30000); // Check health every 30 seconds
+        });
+
+        // Close modals on outside click
+        window.addEventListener('click', (e) => {
+            if (e.target.classList.contains('modal')) {
+                e.target.classList.remove('active');
+            }
+        });
     </script>
 </body>
 </html>

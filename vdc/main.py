@@ -1,16 +1,24 @@
 """
 Main web application entry point for Vision Dataset Curation.
 """
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, Blueprint
 from flask_cors import CORS
 from database import Database, DatasetRepository, ImageRepository
 from config import Config
 from storage import storage_service
-from bson import ObjectId
 import os
 
 app = Flask(__name__)
 CORS(app)
+
+# Create a Blueprint with the base URL prefix
+base_url = Config.get_base_url()
+if base_url:
+    # Use Blueprint for prefixed routes
+    bp = Blueprint('vdc', __name__, url_prefix=base_url)
+else:
+    # Use Blueprint without prefix for root deployment
+    bp = Blueprint('vdc', __name__)
 
 # Initialize database connection
 db = Database()
@@ -22,13 +30,13 @@ def before_request():
         db.connect()
 
 # Web Routes
-@app.route('/')
+@bp.route('/')
 def index():
     """Render the main dataset curation page."""
-    return render_template('index.html')
+    return render_template('index.html', base_url=base_url)
 
 # Configuration endpoint
-@app.route('/api/config', methods=['GET'])
+@bp.route('/api/config', methods=['GET'])
 def get_config():
     """Get application configuration for frontend."""
     return jsonify({
@@ -37,12 +45,13 @@ def get_config():
             'gcs_bucket': Config.get_gcs_bucket(),
             'media_service_base_url': Config.get_media_service_base_url(),
             'namespace': Config.NAMESPACE,
-            'domain': Config.DOMAIN
+            'domain': Config.DOMAIN,
+            'base_url': base_url
         }
     }), 200
 
 # GCS Storage endpoints
-@app.route('/api/storage/browse', methods=['GET'])
+@bp.route('/api/storage/browse', methods=['GET'])
 def browse_storage():
     """Browse files in GCS bucket."""
     prefix = request.args.get('prefix', 'media/')
@@ -51,7 +60,7 @@ def browse_storage():
     result = storage_service.list_files(prefix=prefix, max_results=max_results)
     return jsonify(result), 200 if result.get('success') else 500
 
-@app.route('/api/storage/search', methods=['GET'])
+@bp.route('/api/storage/search', methods=['GET'])
 def search_images():
     """Search for images in GCS bucket."""
     prefix = request.args.get('prefix', 'media/')
@@ -62,7 +71,7 @@ def search_images():
     return jsonify(result), 200 if result.get('success') else 500
 
 # API Routes - Datasets
-@app.route('/api/datasets', methods=['GET'])
+@bp.route('/api/datasets', methods=['GET'])
 def get_datasets():
     """Get all datasets."""
     try:
@@ -77,7 +86,7 @@ def get_datasets():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@app.route('/api/datasets', methods=['POST'])
+@bp.route('/api/datasets', methods=['POST'])
 def create_dataset():
     """Create a new dataset."""
     try:
@@ -98,7 +107,7 @@ def create_dataset():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@app.route('/api/datasets/<dataset_id>', methods=['GET'])
+@bp.route('/api/datasets/<dataset_id>', methods=['GET'])
 def get_dataset(dataset_id):
     """Get a specific dataset by ID."""
     try:
@@ -113,7 +122,7 @@ def get_dataset(dataset_id):
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@app.route('/api/datasets/<dataset_id>', methods=['PUT'])
+@bp.route('/api/datasets/<dataset_id>', methods=['PUT'])
 def update_dataset(dataset_id):
     """Update a dataset."""
     try:
@@ -137,7 +146,7 @@ def update_dataset(dataset_id):
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@app.route('/api/datasets/<dataset_id>', methods=['DELETE'])
+@bp.route('/api/datasets/<dataset_id>', methods=['DELETE'])
 def delete_dataset(dataset_id):
     """Delete a dataset."""
     try:
@@ -152,7 +161,7 @@ def delete_dataset(dataset_id):
         return jsonify({'success': False, 'error': str(e)}), 500
 
 # API Routes - Images
-@app.route('/api/datasets/<dataset_id>/images', methods=['GET'])
+@bp.route('/api/datasets/<dataset_id>/images', methods=['GET'])
 def get_images(dataset_id):
     """Get all images for a dataset."""
     try:
@@ -170,7 +179,7 @@ def get_images(dataset_id):
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@app.route('/api/datasets/<dataset_id>/images', methods=['POST'])
+@bp.route('/api/datasets/<dataset_id>/images', methods=['POST'])
 def create_image(dataset_id):
     """Create a new image entry."""
     try:
@@ -196,11 +205,11 @@ def create_image(dataset_id):
             'success': True,
             'image_id': str(image_id),
             'message': 'Image created successfully'
-        }, 201)
+        }), 201
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@app.route('/api/images/<image_id>/annotations', methods=['POST'])
+@bp.route('/api/images/<image_id>/annotations', methods=['POST'])
 def add_annotation(image_id):
     """Add an annotation to an image."""
     try:
@@ -217,7 +226,7 @@ def add_annotation(image_id):
         return jsonify({'success': False, 'error': str(e)}), 500
 
 # Health check endpoint
-@app.route('/health')
+@bp.route('/health')
 def health():
     """Health check endpoint."""
     try:
@@ -229,6 +238,9 @@ def health():
         return jsonify({'status': 'healthy'}), 200
     except Exception as e:
         return jsonify({'status': 'unhealthy', 'message': str(e)}), 503
+
+# Register the blueprint
+app.register_blueprint(bp)
 
 def main():
     """Main application function."""
@@ -246,6 +258,8 @@ def main():
     host = os.getenv('HOST', '0.0.0.0')
 
     print(f"Starting web server on http://{host}:{port}")
+    if base_url:
+        print(f"Base URL: {base_url}")
     print(f"GCS Bucket: {Config.get_gcs_bucket()}")
     print(f"Media Service: {Config.get_media_service_base_url()}")
     print()
