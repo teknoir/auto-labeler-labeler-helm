@@ -3,6 +3,16 @@ entries:
   vision-dataset-curation:
   - apiVersion: v2
     appVersion: 0.0.1
+    created: "2025-10-09T16:56:39.430117717Z"
+    description: A Helm chart for Teknoir Vision Dataset Curation application
+    digest: f0a22f15896ee63b97c912e4dc8f4ae7139b35396e7791247eac13b7d37e1bf0
+    name: vision-dataset-curation
+    type: application
+    urls:
+    - https://github.com/teknoir/vision-dataset-curation-helm/releases/download/vision-dataset-curation-0.0.0-alpha.7/vision-dataset-curation-0.0.0-alpha.7.tgz
+    version: 0.0.0-alpha.7
+  - apiVersion: v2
+    appVersion: 0.0.1
     created: "2025-10-09T16:48:54.021385634Z"
     description: A Helm chart for Teknoir Vision Dataset Curation application
     digest: 7acb88972e455020167d2c5c222d0ed4b639905bb1d9fb35b7157846c3d367d2
@@ -51,4 +61,4 @@ entries:
     urls:
     - https://github.com/teknoir/vision-dataset-curation-helm/releases/download/vision-dataset-curation-0.0.0-alpha.2/vision-dataset-curation-0.0.0-alpha.2.tgz
     version: 0.0.0-alpha.2
-generated: "2025-10-09T16:48:54.02143165Z"
+generated: "2025-10-09T16:56:39.430163342Z"
