@@ -12,7 +12,7 @@ docker buildx build \
   --platform=linux/amd64 \
   --push \
   --tag ${IMAGE_NAME}:${TAG}-${BRANCH_NAME}-${SHORT_SHA} \
-  .
+  ./vdc
 
 echo "Image built and pushed: ${IMAGE_NAME}:${TAG}-${BRANCH_NAME}-${SHORT_SHA}"
 echo "Update your deployment manifests (deploy-manifest.yaml) to use the new image tag and run ./deploy.sh to deploy."
