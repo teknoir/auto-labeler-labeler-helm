@@ -3,12 +3,12 @@ apiVersion: helm.cattle.io/v1
 kind: HelmChart
 metadata:
   name: vision-dataset-curation
-  namespace: victra-poc
+  namespace: dataset-curation
 spec:
   repo: https://teknoir.github.io/vision-dataset-curation-helm
   chart: vision-dataset-curation
   version: 0.0.0-alpha.8
-  targetNamespace: victra-poc
+  targetNamespace: dataset-curation
   valuesContent: |-
     # Example for minimal configuration
     domain: "teknoir.cloud"

@@ -2,4 +2,4 @@
 set -eo pipefail
 set -x
 
-kubectl -n victra-poc apply -f deploy-manifest.yaml
+kubectl -n dataset-curation apply -f deploy-manifest.yaml
