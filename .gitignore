@@ -1,3 +1,7 @@
 .idea
+node_modules
+dist
+.vscode
+.DS_Store
 tmp
 auto-label-backend.json
