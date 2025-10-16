@@ -14,21 +14,16 @@ spec:
     mongo:
       auth:
         username: teknoir
-        password: change-me
+        password: teknoir123456!
     backend:
       image:
         repository: us-docker.pkg.dev/teknoir/gcr.io/auto-labeler-backend
-        tag: latest-local-20251016-132559
+        tag: latest-local-20251016-221032
       env:
         gcsSignUrls: true
       gcsServiceAccountKeySecret: auto-labeler-backend-gcs
     frontend:
       image:
         repository: us-docker.pkg.dev/teknoir/gcr.io/auto-labeler-frontend
-        tag: latest-local-20251016-132559
-    virtualService:
-      enabled: true
-      gateway: teknoir/teknoir-gateway
-      hosts:
-        - teknoir.cloud
-      basePath: /dataset-curation/auto-labeler-labeler
+        tag: latest-local-20251016-221032
+

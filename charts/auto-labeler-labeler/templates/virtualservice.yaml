@@ -10,7 +10,7 @@ spec:
   gateways:
     - {{ .Values.virtualService.gateway }}
   hosts:
-    {{- toYaml .Values.virtualService.hosts | nindent 4 }}
+    - '*'
   http:
     - match:
         - uri:
