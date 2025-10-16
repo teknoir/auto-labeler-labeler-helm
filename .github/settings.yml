@@ -3,10 +3,10 @@
 # See https://developer.github.com/v3/repos/#edit for all available settings.
 repository:
   # The name of the repository. Changing this will rename the repository
-  name: vision-dataset-curation-helm
+  name: auto-labeler-labeler-helm
 
   # A short description of the repository that will show up on GitHub
-  description: Vision Dataset Curation application Helm Chart
+  description: Auto Labeler Labeler application Helm Chart
 
   # A URL with more information about the repository
   homepage: https://teknoir.cloud
