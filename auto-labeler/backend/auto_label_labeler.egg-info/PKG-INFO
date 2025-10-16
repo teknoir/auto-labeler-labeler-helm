@@ -11,6 +11,8 @@ Requires-Dist: pydantic>=2.8
 Requires-Dist: python-dotenv>=1.0
 Requires-Dist: click>=8.1
 Requires-Dist: google-cloud-storage>=2.17
+Requires-Dist: Pillow>=10.4
+Requires-Dist: tqdm>=4.66
 Provides-Extra: dev
 Requires-Dist: pytest>=8.2; extra == "dev"
 Requires-Dist: mypy>=1.10; extra == "dev"

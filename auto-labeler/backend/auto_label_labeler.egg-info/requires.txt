@@ -6,6 +6,8 @@ pydantic>=2.8
 python-dotenv>=1.0
 click>=8.1
 google-cloud-storage>=2.17
+Pillow>=10.4
+tqdm>=4.66
 
 [dev]
 pytest>=8.2
