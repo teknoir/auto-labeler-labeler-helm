@@ -1,0 +1,7 @@
+README.md
+pyproject.toml
+backend/auto_label_labeler.egg-info/PKG-INFO
+backend/auto_label_labeler.egg-info/SOURCES.txt
+backend/auto_label_labeler.egg-info/dependency_links.txt
+backend/auto_label_labeler.egg-info/requires.txt
+backend/auto_label_labeler.egg-info/top_level.txt

@@ -4,15 +4,30 @@ set -x
 
 export BRANCH_NAME=${BRANCH_NAME:-"local"}
 export SHORT_SHA=$(date +%Y%m%d-%H%M%S)
-export IMAGE_NAME="us-docker.pkg.dev/teknoir/gcr.io/vdc"
+export BACKEND_IMAGE="us-docker.pkg.dev/teknoir/gcr.io/auto-labeler-backend"
+export FRONTEND_IMAGE="us-docker.pkg.dev/teknoir/gcr.io/auto-labeler-frontend"
 export TAG="latest"
 
-docker buildx build \
-  --builder mybuilder \
-  --platform=linux/amd64 \
-  --push \
-  --tag ${IMAGE_NAME}:${TAG}-${BRANCH_NAME}-${SHORT_SHA} \
-  ./vdc
+for target in backend frontend; do
+  image_var_name="$(echo "${target^^}_IMAGE")"
+  image_name="${!image_var_name}"
+  dockerfile="auto-labeler/${target}/Dockerfile"
+  build_context="auto-labeler"
 
-echo "Image built and pushed: ${IMAGE_NAME}:${TAG}-${BRANCH_NAME}-${SHORT_SHA}"
-echo "Update your deployment manifests (deploy-manifest.yaml) to use the new image tag and run ./deploy.sh to deploy."
+  if [[ ! -f "${dockerfile}" ]]; then
+    echo "Missing expected Dockerfile at ${dockerfile}" >&2
+    exit 1
+  fi
+
+  docker buildx build \
+    --builder mybuilder \
+    --platform=linux/amd64 \
+    --push \
+    --tag "${image_name}:${TAG}-${BRANCH_NAME}-${SHORT_SHA}" \
+    -f "${dockerfile}" \
+    "${build_context}"
+
+  echo "Image built and pushed: ${image_name}:${TAG}-${BRANCH_NAME}-${SHORT_SHA}"
+done
+
+echo "Update your deployment manifests (deploy-manifest.yaml or Helm values) to use the new backend and frontend image tags, then run ./deploy.sh to deploy."

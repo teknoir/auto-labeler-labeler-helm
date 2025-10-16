@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: auto-labeler-frontend
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "auto-labeler-labeler.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    app: auto-labeler-frontend
+  ports:
+    - name: http
+      port: {{ .Values.frontend.service.port }}
+      targetPort: {{ .Values.frontend.service.port }}

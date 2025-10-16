@@ -1,0 +1,82 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auto-labeler-backend
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "auto-labeler-labeler.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.backend.replicaCount }}
+  selector:
+    matchLabels:
+      app: auto-labeler-backend
+  template:
+    metadata:
+      labels:
+        app: auto-labeler-backend
+      {{- with .Values.backend.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      {{- $mongoSecret := (or .Values.mongo.auth.existingSecret .Values.backend.mongoSecretName) | default "auto-labeler-mongo" }}
+      {{- $gcsSecret := "" }}
+      {{- if .Values.backend.gcsServiceAccountKeySecret }}
+        {{- $gcsSecret = .Values.backend.gcsServiceAccountKeySecret }}
+      {{- else if .Values.backend.gcsServiceAccountKey }}
+        {{- $gcsSecret = "auto-labeler-backend-gcs" }}
+      {{- end }}
+      {{- $credentialsPath := .Values.backend.env.googleCredentialsPath }}
+      containers:
+        - name: backend
+          image: "{{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag }}"
+          imagePullPolicy: {{ .Values.backend.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.backend.service.port }}
+              name: http
+          env:
+            - name: MONGO_URI
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $mongoSecret }}
+                  key: uri
+            - name: MONGO_DATABASE
+              value: {{ .Values.backend.env.mongoDatabase | quote }}
+            - name: GCS_SIGN_URLS
+              value: {{ ternary "true" "false" .Values.backend.env.gcsSignUrls | quote }}
+            - name: GCS_URL_TTL_SECONDS
+              value: {{ printf "%d" (int .Values.backend.env.gcsUrlTtlSeconds) | quote }}
+            - name: GOOGLE_APPLICATION_CREDENTIALS
+              value: {{ $credentialsPath | quote }}
+            {{- with .Values.backend.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- if $gcsSecret }}
+          volumeMounts:
+            - name: gcs-key
+              mountPath: {{ dir $credentialsPath | quote }}
+              readOnly: true
+          {{- end }}
+          resources:
+            {{- toYaml .Values.backend.resources | nindent 12 }}
+      {{- if $gcsSecret }}
+      volumes:
+        - name: gcs-key
+          secret:
+            secretName: {{ $gcsSecret }}
+            items:
+              - key: key.json
+                path: {{ base $credentialsPath | quote }}
+      {{- end }}
+      {{- with .Values.backend.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.backend.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.backend.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
