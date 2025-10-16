@@ -14,7 +14,7 @@ spec:
   http:
     - match:
         - uri:
-            prefix: {{ printf "%s/api" (.Values.virtualService.basePath | trimSuffix "/") | quote }}
+            prefix: {{ include "auto-labeler-labeler.api-full-base-path" . | quote }}
       route:
         - destination:
             host: auto-labeler-backend.{{ .Release.Namespace }}.svc.cluster.local
@@ -22,7 +22,7 @@ spec:
               number: {{ .Values.backend.service.port }}
     - match:
         - uri:
-            prefix: {{ .Values.virtualService.basePath | quote }}
+            prefix: {{ include "auto-labeler-labeler.full-base-path" . | quote }}
       route:
         - destination:
             host: auto-labeler-frontend.{{ .Release.Namespace }}.svc.cluster.local

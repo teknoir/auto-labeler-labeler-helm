@@ -20,3 +20,11 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{ $k }}: {{ $v | quote }}
 {{- end }}
 {{- end -}}
+
+{{- define "auto-labeler-labeler.full-base-path" -}}
+{{- printf "/%s/%s" (.Release.Namespace) (trimPrefix "/" (trimSuffix "/" .Values.basePath)) -}}
+{{- end -}}
+
+{{- define "auto-labeler-labeler.api-full-base-path" -}}
+{{- printf "/%s/%s/api" (.Release.Namespace) (trimPrefix "/" (trimSuffix "/" .Values.basePath)) -}}
+{{- end -}}
