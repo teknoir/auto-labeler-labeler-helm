@@ -1,0 +1,31 @@
+{{- if .Values.virtualService.enabled }}
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: auto-labeler
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "auto-labeler-labeler.labels" . | nindent 4 }}
+spec:
+  gateways:
+    - {{ .Values.virtualService.gateway }}
+  hosts:
+    {{- toYaml .Values.virtualService.hosts | nindent 4 }}
+  http:
+    - match:
+        - uri:
+            prefix: {{ printf "%s/api" (.Values.virtualService.basePath | trimSuffix "/") | quote }}
+      route:
+        - destination:
+            host: auto-labeler-backend.{{ .Release.Namespace }}.svc.cluster.local
+            port:
+              number: {{ .Values.backend.service.port }}
+    - match:
+        - uri:
+            prefix: {{ .Values.virtualService.basePath | quote }}
+      route:
+        - destination:
+            host: auto-labeler-frontend.{{ .Release.Namespace }}.svc.cluster.local
+            port:
+              number: {{ .Values.frontend.service.port }}
+{{- end }}
