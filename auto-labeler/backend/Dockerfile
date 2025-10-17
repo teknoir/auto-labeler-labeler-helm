@@ -14,8 +14,8 @@ RUN pip install --upgrade pip && \
 ENV MONGO_URI="mongodb://auto-labeler-mongo:27017" \
     MONGO_DATABASE="auto_label_labeler" \
     GOOGLE_APPLICATION_CREDENTIALS="/var/secrets/google/auto-label-backend.json" \
-    BASE_PATH=""
+    BASE_URL="/dataset-curation/auto-labeler-labeler/api"
 
 EXPOSE 8000
 
-CMD ["uvicorn", "backend.app.main:app", "--host", "0.0.0.0", "--port", "8000", "--root-path", "$BASE_PATH"]
+CMD uvicorn backend.app.main:app --host 0.0.0.0 --port 8000

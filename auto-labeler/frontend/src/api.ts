@@ -13,7 +13,8 @@ import type {
   TrackSample,
 } from "./types";
 
-const API_ROOT = "/api";
+// Use Vite's base path for API calls
+const API_ROOT = `${import.meta.env.BASE_URL}api`.replace(/\/+/g, '/').replace(/\/$/, '');
 
 async function handleResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {

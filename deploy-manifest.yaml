@@ -18,11 +18,13 @@ spec:
     backend:
       image:
         repository: us-docker.pkg.dev/teknoir/gcr.io/auto-labeler-backend
-        tag: latest-local-20251017-133921
+        tag: latest-local-20251017-154511
       env:
         gcsSignUrls: true
       gcsServiceAccountKeySecret: auto-labeler-gcs
     frontend:
+      service:
+        port: 5173
       image:
         repository: us-docker.pkg.dev/teknoir/gcr.io/auto-labeler-frontend
-        tag: latest-local-20251017-133921
+        tag: latest-local-20251017-154511
