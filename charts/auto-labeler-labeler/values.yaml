@@ -30,7 +30,7 @@ backend:
     mongoDatabase: auto_label_labeler
     gcsSignUrls: false
     gcsUrlTtlSeconds: 3600
-    googleCredentialsPath: /var/secrets/google/key.json
+    googleCredentialsPath: /var/secrets/google/auto-label-backend.json
   gcsServiceAccountKeySecret:
   gcsServiceAccountKey:
   resources:
