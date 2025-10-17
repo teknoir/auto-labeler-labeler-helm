@@ -55,6 +55,6 @@ Override `values.yaml` as needed for credentials, persistence, Istio routing, an
 Install the secret with 
 ```bash
 kubectl create secret generic auto-labeler-backend-gcs \
-       --from-file=key.json=/path/to/key.json \
+       --from-file=auto-label-backend.json=/path/to/auto-label-backend.json \
        -n <namespace>
 ```

@@ -13,7 +13,7 @@ RUN pip install --upgrade pip && \
 
 ENV MONGO_URI="mongodb://auto-labeler-mongo:27017" \
     MONGO_DATABASE="auto_label_labeler" \
-    GOOGLE_APPLICATION_CREDENTIALS="/var/secrets/google/key.json" \
+    GOOGLE_APPLICATION_CREDENTIALS="/var/secrets/google/auto-label-backend.json" \
     BASE_PATH=""
 
 EXPOSE 8000

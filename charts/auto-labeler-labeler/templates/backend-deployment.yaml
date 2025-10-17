@@ -60,6 +60,6 @@ spec:
           secret:
             secretName: {{ $gcsSecret }}
             items:
-              - key: key.json
+              - key: auto-label-backend.json
                 path: {{ base $credentialsPath | quote }}
       {{- end }}

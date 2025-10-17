@@ -107,8 +107,8 @@ docker push us-docker.pkg.dev/teknoir/gcr.io/auto-labeler-frontend:{{TAG}}
 
 Signing is provided directly by the backend via `backend/app/gcs.py`. To enable it:
 
-- Mount the Google service-account JSON into the backend pod (e.g., `/var/secrets/google/key.json`).
-- Set `GCS_SIGN_URLS=1`, `GCS_URL_TTL_SECONDS` (default 3600), and `GOOGLE_APPLICATION_CREDENTIALS=/var/secrets/google/key.json`.
+- Mount the Google service-account JSON into the backend pod (e.g., `/var/secrets/google/auto-label-backend.json`).
+- Set `GCS_SIGN_URLS=1`, `GCS_URL_TTL_SECONDS` (default 3600), and `GOOGLE_APPLICATION_CREDENTIALS=/var/secrets/google/auto-label-backend.json`.
 - Ensure the service account has `storage.objects.get` on the relevant buckets.
 
 No separate signing microservice is required; every backend request that resolves a `gs://` URI will automatically call `get_image_url()` and return either a public URL or a signed URL depending on the flag.
@@ -124,8 +124,8 @@ Create a new chart under `charts/auto-labeler-labeler/` using `helm create` and 
   - `MONGO_URI=mongodb://$(MONGO_USER):$(MONGO_PASSWORD)@auto-labeler-mongo:27017`
   - `MONGO_DATABASE=auto_label_labeler`
   - `GCS_SIGN_URLS=1`
-  - `GOOGLE_APPLICATION_CREDENTIALS=/var/secrets/google/key.json`
-  Mount both the Mongo credentials secret (for username/password) and the GCS key secret using `volumeMounts`. Expose the GCS key at `/var/secrets/google/key.json` so `backend/app/gcs.py` can load it.
+  - `GOOGLE_APPLICATION_CREDENTIALS=/var/secrets/google/auto-label-backend.json`
+  Mount both the Mongo credentials secret (for username/password) and the GCS key secret using `volumeMounts`. Expose the GCS key at `/var/secrets/google/auto-label-backend.json` so `backend/app/gcs.py` can load it.
 - `templates/backend-service.yaml` – ClusterIP on port 8000.
 - `templates/frontend-deployment.yaml` – Vite container (Nginx) with basic `ConfigMap` for environment overrides if needed.
 - `templates/frontend-service.yaml` – ClusterIP on port 80.
@@ -169,7 +169,7 @@ backend:
     mongoDatabase: auto_label_labeler
     gcsSignUrls: true
     gcsUrlTtlSeconds: 3600
-    googleCredentialsPath: /var/secrets/google/key.json
+    googleCredentialsPath: /var/secrets/google/auto-label-backend.json
   mongoSecretName: auto-labeler-mongo
   gcsServiceAccountKeySecret: auto-labeler-backend-gcs
   gcsServiceAccountKey: ""
@@ -206,7 +206,7 @@ virtualService:
 
    ```bash
    kubectl create secret generic auto-labeler-backend-gcs \
-     --from-file=key.json=/path/to/auto-label-backend.json \
+     --from-file=auto-label-backend.json=/path/to/auto-label-backend.json \
      -n <namespace>
    ```
 
