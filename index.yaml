@@ -3,6 +3,16 @@ entries:
   auto-labeler-labeler:
   - apiVersion: v2
     appVersion: 0.1.0
+    created: "2025-10-17T06:53:27.045590185Z"
+    description: Helm chart for deploying Auto Label Labeler services.
+    digest: 88bd6e7bf812a8ed057c4ce6b19ee9471e8a1ab8830c4df25f95c9b8fe0bb3c4
+    name: auto-labeler-labeler
+    type: application
+    urls:
+    - https://github.com/teknoir/auto-labeler-labeler-helm/releases/download/auto-labeler-labeler-0.1.3/auto-labeler-labeler-0.1.3.tgz
+    version: 0.1.3
+  - apiVersion: v2
+    appVersion: 0.1.0
     created: "2025-10-16T20:28:34.527624278Z"
     description: Helm chart for deploying Auto Label Labeler services.
     digest: 63747c7a843c9342d50ae566ec2d99ec7ca87525a12cc7a5be7e46b5838fcada
@@ -102,4 +112,4 @@ entries:
     urls:
     - https://github.com/teknoir/vision-dataset-curation-helm/releases/download/vision-dataset-curation-0.0.0-alpha.2/vision-dataset-curation-0.0.0-alpha.2.tgz
     version: 0.0.0-alpha.2
-generated: "2025-10-16T20:28:34.527657139Z"
+generated: "2025-10-17T06:53:27.045634749Z"
