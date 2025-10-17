@@ -14,17 +14,13 @@ spec:
     metadata:
       labels:
         app: auto-labeler-backend
-      {{- with .Values.backend.podAnnotations }}
-      annotations:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
     spec:
       {{- $mongoSecret := (or .Values.mongo.auth.existingSecret .Values.backend.mongoSecretName) | default "auto-labeler-mongo" }}
       {{- $gcsSecret := "" }}
       {{- if .Values.backend.gcsServiceAccountKeySecret }}
         {{- $gcsSecret = .Values.backend.gcsServiceAccountKeySecret }}
       {{- else if .Values.backend.gcsServiceAccountKey }}
-        {{- $gcsSecret = "auto-labeler-backend-gcs" }}
+        {{- $gcsSecret = "auto-labeler-gcs" }}
       {{- end }}
       {{- $credentialsPath := .Values.backend.env.googleCredentialsPath }}
       containers:
@@ -48,9 +44,8 @@ spec:
               value: {{ printf "%d" (int .Values.backend.env.gcsUrlTtlSeconds) | quote }}
             - name: GOOGLE_APPLICATION_CREDENTIALS
               value: {{ $credentialsPath | quote }}
-            {{- with .Values.backend.extraEnv }}
-            {{- toYaml . | nindent 12 }}
-            {{- end }}
+            - name: BASE_URL
+              value: {{ include "auto-labeler-labeler.api-full-base-path" . | quote }}
           {{- if $gcsSecret }}
           volumeMounts:
             - name: gcs-key
@@ -67,16 +62,4 @@ spec:
             items:
               - key: key.json
                 path: {{ base $credentialsPath | quote }}
-      {{- end }}
-      {{- with .Values.backend.nodeSelector }}
-      nodeSelector:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
-      {{- with .Values.backend.tolerations }}
-      tolerations:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
-      {{- with .Values.backend.affinity }}
-      affinity:
-        {{- toYaml . | nindent 8 }}
       {{- end }}

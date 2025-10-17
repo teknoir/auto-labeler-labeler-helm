@@ -6,15 +6,16 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-RUN pip install --upgrade pip
-
-# Copy application code and install the project as a package
+COPY pyproject.toml /app/pyproject.toml
 COPY backend /app/backend
-RUN pip install /app
+RUN pip install --upgrade pip && \
+    pip install /app
 
 ENV MONGO_URI="mongodb://auto-labeler-mongo:27017" \
-    MONGO_DATABASE="auto_label_labeler"
+    MONGO_DATABASE="auto_label_labeler" \
+    GOOGLE_APPLICATION_CREDENTIALS="/var/secrets/google/key.json" \
+    BASE_PATH=""
 
 EXPOSE 8000
 
-CMD ["uvicorn", "backend.app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "backend.app.main:app", "--host", "0.0.0.0", "--port", "8000", "--root-path", "$BASE_PATH"]

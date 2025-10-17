@@ -1,18 +1,15 @@
+basePath: /auto-labeler-labeler
+
 mongo:
   image:
     repository: mongo
     tag: "8.0"
-    pullPolicy: IfNotPresent
+    pullPolicy: Always
   auth:
     username: teknoir
     password: change-me
-    existingSecret: ""
   service:
     port: 27017
-  persistence:
-    enabled: true
-    size: 20Gi
-    storageClass: ""
   resources:
     requests:
       cpu: 250m
@@ -25,7 +22,7 @@ backend:
   image:
     repository: us-docker.pkg.dev/teknoir/gcr.io/auto-labeler-backend
     tag: latest
-    pullPolicy: IfNotPresent
+    pullPolicy: Always
   replicaCount: 1
   service:
     port: 8000
@@ -34,9 +31,8 @@ backend:
     gcsSignUrls: false
     gcsUrlTtlSeconds: 3600
     googleCredentialsPath: /var/secrets/google/key.json
-  mongoSecretName: auto-labeler-mongo
-  gcsServiceAccountKeySecret: ""
-  gcsServiceAccountKey: ""
+  gcsServiceAccountKeySecret:
+  gcsServiceAccountKey:
   resources:
     requests:
       cpu: 250m
@@ -44,17 +40,13 @@ backend:
     limits:
       cpu: 500m
       memory: 1Gi
-  podAnnotations: {}
-  nodeSelector: {}
-  tolerations: []
-  affinity: {}
-  extraEnv: []
+
 
 frontend:
   image:
     repository: us-docker.pkg.dev/teknoir/gcr.io/auto-labeler-frontend
     tag: latest
-    pullPolicy: IfNotPresent
+    pullPolicy: Always
   replicaCount: 1
   service:
     port: 80
@@ -65,22 +57,9 @@ frontend:
     limits:
       cpu: 250m
       memory: 256Mi
-  podAnnotations: {}
-  nodeSelector: {}
-  tolerations: []
-  affinity: {}
 
-ingress:
-  enabled: false
-  className: ""
-  hosts: []
-  tls: []
 
 virtualService:
   enabled: true
-  gateway: teknoir/teknoir-gateway
-  hosts:
-    - "*"
-  basePath: /auto-labeler-labeler
 
 commonLabels: {}
