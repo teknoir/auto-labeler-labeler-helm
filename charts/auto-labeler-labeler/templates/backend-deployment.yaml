@@ -20,7 +20,7 @@ spec:
       {{- if .Values.backend.gcsServiceAccountKeySecret }}
         {{- $gcsSecret = .Values.backend.gcsServiceAccountKeySecret }}
       {{- else if .Values.backend.gcsServiceAccountKey }}
-        {{- $gcsSecret = "auto-labeler-backend-gcs" }}
+        {{- $gcsSecret = "auto-labeler-gcs" }}
       {{- end }}
       {{- $credentialsPath := .Values.backend.env.googleCredentialsPath }}
       containers:

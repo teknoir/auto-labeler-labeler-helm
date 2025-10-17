@@ -8,7 +8,7 @@ metadata:
     {{- include "auto-labeler-labeler.labels" . | nindent 4 }}
 spec:
   gateways:
-    - {{ .Values.virtualService.gateway }}
+    - teknoir/teknoir-gateway
   hosts:
     - '*'
   http:
