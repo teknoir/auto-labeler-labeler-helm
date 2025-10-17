@@ -12,4 +12,5 @@ spec:
   ports:
     - name: mongo
       port: {{ .Values.mongo.service.port }}
+      protocol: TCP
       targetPort: {{ .Values.mongo.service.port }}
