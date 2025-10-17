@@ -10,7 +10,7 @@ spec:
   selector:
     app: auto-labeler-mongo
   ports:
-    - name: mongo
+    - name: tcp-27017
       port: {{ .Values.mongo.service.port }}
       protocol: TCP
       targetPort: {{ .Values.mongo.service.port }}
