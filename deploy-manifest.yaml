@@ -7,7 +7,7 @@ metadata:
 spec:
   repo: https://teknoir.github.io/auto-labeler-labeler-helm
   chart: auto-labeler-labeler
-  version: 0.1.4
+  version: 0.1.5
   targetNamespace: dataset-curation
   valuesContent: |-
     # Example for minimal configuration
