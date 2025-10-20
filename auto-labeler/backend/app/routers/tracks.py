@@ -184,7 +184,7 @@ async def get_track_frames(
 async def get_track_samples(
     batch_key: str,
     track_tag: str,
-    limit: int = Query(default=20, ge=1, le=500),
+    limit: int = Query(default=20, ge=0, le=2000),
     db: AsyncIOMotorDatabase = Depends(get_database),
 ) -> List[TrackSample]:
     try:
@@ -198,9 +198,10 @@ async def get_track_samples(
             db.annotations
             .find({"batch_id": batch["_id"], "track_tag": track_tag}, projection=projection)
             .sort([("frame_id", 1), ("annotation_index", 1)])
-            .limit(limit)
         )
-        annotations = await cursor.to_list(length=limit)
+        if limit > 0:
+            cursor = cursor.limit(limit)
+        annotations = await cursor.to_list(length=None if limit == 0 else limit)
         if not annotations:
             return []
 

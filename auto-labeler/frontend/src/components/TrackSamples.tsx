@@ -3,7 +3,16 @@ import { useMemo } from "react";
 
 import type { TrackSample } from "../types";
 
-const LIMIT_OPTIONS = [20, 40, 80, 160, 320, 500];
+const LIMIT_OPTIONS: Array<{ label: string; value: number }> = [
+  { label: "20", value: 20 },
+  { label: "40", value: 40 },
+  { label: "80", value: 80 },
+  { label: "160", value: 160 },
+  { label: "320", value: 320 },
+  { label: "500", value: 500 },
+  { label: "800", value: 800 },
+  { label: "All", value: 0 },
+];
 
 interface TrackSamplesProps {
   samples: TrackSample[];
@@ -40,8 +49,8 @@ export default function TrackSamples({
             onChange={(event) => onLimitChange(Number(event.target.value))}
           >
             {LIMIT_OPTIONS.map((option) => (
-              <option key={option} value={option}>
-                {option}
+              <option key={option.value} value={option.value}>
+                {option.label}
               </option>
             ))}
           </select>
@@ -55,7 +64,7 @@ export default function TrackSamples({
       ) : (
         <>
           <div className="mb-2 text-[11px] text-slate-400">
-            Showing {Math.min(samples.length, limit)} of {totalCount} annotations
+            Showing {limit === 0 ? samples.length : Math.min(samples.length, limit)} of {totalCount} annotations
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {samples.map((sample) => (

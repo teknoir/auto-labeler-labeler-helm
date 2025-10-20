@@ -31,6 +31,8 @@ const STATUS_RING: Record<string, string> = {
   unreviewed: "ring-slate-300/40",
 };
 
+const MAX_SAMPLES_LIMIT = 2000;
+
 type ActiveSelection = {
   frameListIndex: number;
   frameIndex: number;
@@ -167,8 +169,10 @@ export default function FrameViewer(): JSX.Element {
         sample.annotation_id === activeSelection.annotationId &&
         sample.frame_index === activeSelection.frameIndex
     );
-    if (!exists && samplesLimit < 500) {
-      setSamplesLimit((limit) => Math.min(500, Math.max(limit * 2, limit + 20)));
+    if (!exists && samplesLimit !== 0 && samplesLimit < MAX_SAMPLES_LIMIT) {
+      setSamplesLimit((limit) =>
+        limit === 0 ? 0 : Math.min(MAX_SAMPLES_LIMIT, Math.max(limit * 2, limit + 20))
+      );
     }
   }, [trackSamples, activeSelection, samplesLimit]);
 
