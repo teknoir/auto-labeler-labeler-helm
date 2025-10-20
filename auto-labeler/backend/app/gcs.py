@@ -32,17 +32,17 @@ def _get_storage_client() -> storage.Client:
     return storage.Client()
 
 
-def build_public_url(uri: str) -> str:
+def build_public_url(uri: str, settings: Settings) -> str:
     bucket, key = parse_gcs_uri(uri)
-    return f"https://storage.googleapis.com/{bucket}/{key}"
-
+    # return f"https://storage.googleapis.com/{bucket}/{key}"
+    return f"https://{settings.domain}/{settings.namespace}/media-service/api/jpeg/{key}"
 
 def get_image_url(uri: str) -> str:
     settings = get_settings()
     if not uri.startswith("gs://"):
         return uri
     if not settings.gcs_url_signed:
-        return build_public_url(uri)
+        return build_public_url(uri, settings)
 
     bucket_name, blob_name = parse_gcs_uri(uri)
     client = _get_storage_client()

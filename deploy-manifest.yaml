@@ -7,7 +7,7 @@ metadata:
 spec:
   repo: https://teknoir.github.io/auto-labeler-labeler-helm
   chart: auto-labeler-labeler
-  version: 0.1.8
+  version: 0.1.9
   targetNamespace: dataset-curation
   valuesContent: |-
     # Example for minimal configuration
@@ -18,13 +18,10 @@ spec:
     backend:
       image:
         repository: us-docker.pkg.dev/teknoir/gcr.io/auto-labeler-backend
-        tag: latest-local-20251017-154511
-      env:
-        gcsSignUrls: true
-      gcsServiceAccountKeySecret: auto-labeler-gcs
+        tag: latest-local-20251020-093510
     frontend:
       service:
         port: 5173
       image:
         repository: us-docker.pkg.dev/teknoir/gcr.io/auto-labeler-frontend
-        tag: latest-local-20251017-154511
+        tag: latest-local-20251020-093510

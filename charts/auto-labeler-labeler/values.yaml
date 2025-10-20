@@ -1,4 +1,5 @@
 basePath: /auto-labeler-labeler
+domain: teknoir.cloud
 
 mongo:
   image:

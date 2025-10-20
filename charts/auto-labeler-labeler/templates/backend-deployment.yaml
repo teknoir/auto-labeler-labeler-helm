@@ -46,6 +46,10 @@ spec:
               value: {{ $credentialsPath | quote }}
             - name: BASE_URL
               value: {{ include "auto-labeler-labeler.api-full-base-path" . | quote }}
+            - name: NAMESPACE
+              value: {{ .Release.Namespace | quote }}
+            - name: DOMAIN
+              value: {{ .Values.domain | quote }}
           {{- if $gcsSecret }}
           volumeMounts:
             - name: gcs-key

@@ -14,6 +14,8 @@ class Settings(BaseModel):
     gcs_url_signed: bool = Field(default=False, alias="GCS_SIGN_URLS")
     gcs_url_ttl_seconds: int = Field(default=3600, alias="GCS_URL_TTL_SECONDS")
     google_credentials_file: Optional[str] = Field(default=None, alias="GOOGLE_APPLICATION_CREDENTIALS")
+    namespace: str = Field(default="dataset-curation", alias="NAMESPACE")
+    domain: str = Field(default="teknoir.cloud", alias="DOMAIN")
 
     model_config = ConfigDict(populate_by_name=True)
 
