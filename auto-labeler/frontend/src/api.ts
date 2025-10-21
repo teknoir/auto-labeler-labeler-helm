@@ -91,9 +91,11 @@ export async function saveFrame(
 export async function abandonTrack(
   batchKey: string,
   trackTag: string,
-  payload: TrackAbandonPayload
+  payload: TrackAbandonPayload,
+  blur: BlurFilter = "all"
 ): Promise<{ updated_annotations: number; track_status: string }> {
-  const res = await fetch(`${API_ROOT}/batches/${batchKey}/tracks/${encodeURIComponent(trackTag)}/abandon`, {
+  const params = new URLSearchParams({ blur });
+  const res = await fetch(`${API_ROOT}/batches/${batchKey}/tracks/${encodeURIComponent(trackTag)}/abandon?${params.toString()}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -104,9 +106,11 @@ export async function abandonTrack(
 export async function recoverTrack(
   batchKey: string,
   trackTag: string,
-  payload: TrackRecoverPayload
+  payload: TrackRecoverPayload,
+  blur: BlurFilter = "all"
 ): Promise<{ updated_annotations: number; track_status: string }> {
-  const res = await fetch(`${API_ROOT}/batches/${batchKey}/tracks/${encodeURIComponent(trackTag)}/recover`, {
+  const params = new URLSearchParams({ blur });
+  const res = await fetch(`${API_ROOT}/batches/${batchKey}/tracks/${encodeURIComponent(trackTag)}/recover?${params.toString()}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -117,9 +121,11 @@ export async function recoverTrack(
 export async function acceptTrack(
   batchKey: string,
   trackTag: string,
-  payload: TrackAbandonPayload
+  payload: TrackAbandonPayload,
+  blur: BlurFilter = "all"
 ): Promise<{ updated_annotations: number; track_status: string }> {
-  const res = await fetch(`${API_ROOT}/batches/${batchKey}/tracks/${encodeURIComponent(trackTag)}/accept`, {
+  const params = new URLSearchParams({ blur });
+  const res = await fetch(`${API_ROOT}/batches/${batchKey}/tracks/${encodeURIComponent(trackTag)}/accept?${params.toString()}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),

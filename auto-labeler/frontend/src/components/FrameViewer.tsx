@@ -436,16 +436,24 @@ useEffect(() => {
     }
     try {
       setIsTrackActionPending(true);
-      await abandonTrack(batchKey, selectedTrack, {
-        from_frame_index: currentFrame.frame_index,
-      });
+      await abandonTrack(
+        batchKey,
+        selectedTrack,
+        {
+          from_frame_index: currentFrame.frame_index,
+        },
+        blurFilter
+      );
 
       const fromIndex = currentFrame.frame_index;
       queryClient.setQueryData<TrackSample[]>(
         samplesQueryKey,
         (existing) =>
           existing?.map((sample) =>
-            sample.frame_index >= fromIndex ? { ...sample, status: "abandoned" } : sample
+            sample.frame_index >= fromIndex &&
+            (blurFilter === "all" || sample.blur_decision === blurFilter)
+              ? { ...sample, status: "abandoned" }
+              : sample
           ) ?? existing
       );
 
@@ -466,6 +474,7 @@ useEffect(() => {
     samplesQueryKey,
     queryClient,
     setActiveSelection,
+    blurFilter,
   ]);
 
   const handleAcceptFromFrame = useCallback(async () => {
@@ -474,16 +483,24 @@ useEffect(() => {
     }
     try {
       setIsTrackActionPending(true);
-      await acceptTrack(batchKey, selectedTrack, {
-        from_frame_index: currentFrame.frame_index,
-      });
+      await acceptTrack(
+        batchKey,
+        selectedTrack,
+        {
+          from_frame_index: currentFrame.frame_index,
+        },
+        blurFilter
+      );
 
       const fromIndex = currentFrame.frame_index;
       queryClient.setQueryData<TrackSample[]>(
         samplesQueryKey,
         (existing) =>
           existing?.map((sample) =>
-            sample.frame_index >= fromIndex ? { ...sample, status: "accepted" } : sample
+            sample.frame_index >= fromIndex &&
+            (blurFilter === "all" || sample.blur_decision === blurFilter)
+              ? { ...sample, status: "accepted" }
+              : sample
           ) ?? existing
       );
 
@@ -494,7 +511,15 @@ useEffect(() => {
             if (frame.frame_index < fromIndex) {
               return frame;
             }
-            const annotations = frame.annotations.map((ann) => ({ ...ann, status: "accepted" as AnnotationStatus }));
+            const annotations = frame.annotations.map((ann) => {
+              const matchesBlur =
+                blurFilter === "all" ||
+                ((ann as Annotation & { blur_decision?: string }).blur_decision ?? null) === blurFilter;
+              if (frame.frame_index >= fromIndex && matchesBlur) {
+                return { ...ann, status: "accepted" as AnnotationStatus };
+              }
+              return ann;
+            });
             const pending = annotations.filter((ann) => ann.status === "unreviewed").length;
             const accepted = annotations.filter((ann) => ann.status === "accepted").length;
             const rejected = annotations.filter((ann) => ann.status === "rejected").length;
@@ -529,6 +554,7 @@ useEffect(() => {
     samplesQueryKey,
     framesQueryKey,
     setActiveSelection,
+    blurFilter,
   ]);
 
   const handleRecoverTrack = useCallback(async () => {
@@ -537,16 +563,22 @@ useEffect(() => {
     }
     try {
       setIsTrackActionPending(true);
-      await recoverTrack(batchKey, selectedTrack, {
-        from_frame_index: currentFrame.frame_index,
-      });
+      await recoverTrack(
+        batchKey,
+        selectedTrack,
+        {
+          from_frame_index: currentFrame.frame_index,
+        },
+        blurFilter
+      );
 
       const fromIndex = currentFrame.frame_index;
       queryClient.setQueryData<TrackSample[]>(
         samplesQueryKey,
         (existing) =>
           existing?.map((sample) =>
-            sample.frame_index >= fromIndex
+            sample.frame_index >= fromIndex &&
+            (blurFilter === "all" || sample.blur_decision === blurFilter)
               ? { ...sample, status: "unreviewed" }
               : sample
           ) ?? existing
@@ -559,11 +591,15 @@ useEffect(() => {
             if (frame.frame_index < fromIndex) {
               return frame;
             }
-            const annotations = frame.annotations.map((ann) =>
-              ann.status === "abandoned"
-                ? { ...ann, status: "unreviewed" as AnnotationStatus }
-                : ann
-            );
+            const annotations = frame.annotations.map((ann) => {
+              const matchesBlur =
+                blurFilter === "all" ||
+                ((ann as Annotation & { blur_decision?: string }).blur_decision ?? null) === blurFilter;
+              if (frame.frame_index >= fromIndex && matchesBlur && ann.status === "abandoned") {
+                return { ...ann, status: "unreviewed" as AnnotationStatus };
+              }
+              return ann;
+            });
             const pending = annotations.filter((ann) => ann.status === "unreviewed").length;
             const accepted = annotations.filter((ann) => ann.status === "accepted").length;
             const rejected = annotations.filter((ann) => ann.status === "rejected").length;
@@ -612,6 +648,7 @@ useEffect(() => {
     samplesQueryKey,
     framesQueryKey,
     setActiveSelection,
+    blurFilter,
   ]);
 
   const handleMarkComplete = useCallback(async () => {
