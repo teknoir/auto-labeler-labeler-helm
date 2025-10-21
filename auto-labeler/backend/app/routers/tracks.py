@@ -144,6 +144,8 @@ def _build_export_payload(
     categories: Dict[int, Dict] = {}
     annotations: List[Dict] = []
 
+    track_map = {doc.get("track_tag"): doc for doc in track_docs}
+
     for doc in annotation_docs:
         frame = doc.get("frame_doc")
         if not frame:
@@ -161,11 +163,21 @@ def _build_export_payload(
                 "gcs_uri": frame.get("gcs_uri"),
             }
 
+        track_tag = doc.get("track_tag")
+        track_override = track_map.get(track_tag, {})
+        override_class = track_override.get("primary_class") or track_override.get("categories", [None])[0]
+
         category_id = doc.get("category_id")
+        category_name = override_class or doc.get("category_name")
         if category_id is not None:
             categories[category_id] = {
                 "id": category_id,
-                "name": doc.get("category_name", ""),
+                "name": category_name,
+            }
+        elif category_name:
+            categories[category_name] = {
+                "id": category_name,
+                "name": category_name,
             }
 
         latest_status = doc.get("latest_judgment", {}).get("status") or doc.get("status", "unreviewed")
@@ -173,9 +185,9 @@ def _build_export_payload(
             "id": doc.get("annotation_index") or str(doc.get("_id")),
             "annotation_id": str(doc.get("_id")),
             "image_id": frame_id,
-            "track_tag": doc.get("track_tag"),
+            "track_tag": track_tag,
             "category_id": category_id,
-            "category_name": doc.get("category_name"),
+            "category_name": category_name,
             "bbox": _normalise_bbox(doc.get("bbox")),
             "area": doc.get("area"),
             "status": latest_status,
