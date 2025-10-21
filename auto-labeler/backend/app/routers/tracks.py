@@ -222,7 +222,6 @@ def _build_export_payload(
                 "track_tag": track_tag,
                 "primary_class": doc.get("primary_class"),
                 "categories": doc.get("categories", []),
-                "person_down": doc.get("person_down", False),
                 "manually_completed": doc.get("manually_completed", False),
                 "status": doc.get("status", "active"),
                 "pending_annotations": (pending_counts or {}).get(track_tag, 0),
