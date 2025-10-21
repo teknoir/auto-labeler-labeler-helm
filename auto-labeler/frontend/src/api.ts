@@ -184,3 +184,18 @@ export async function updateTrackPersonDown(
   });
   return handleResponse(res);
 }
+
+export async function exportTrack(
+  batchKey: string,
+  trackTag: string
+): Promise<any> {
+  const res = await fetch(
+    `${API_ROOT}/batches/${batchKey}/tracks/${encodeURIComponent(trackTag)}/export`
+  );
+  return handleResponse(res);
+}
+
+export async function exportCompletedTracks(batchKey: string): Promise<any> {
+  const res = await fetch(`${API_ROOT}/batches/${batchKey}/tracks/export?status_filter=complete`);
+  return handleResponse(res);
+}

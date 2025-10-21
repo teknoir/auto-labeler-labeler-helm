@@ -27,6 +27,13 @@ class AnnotationOut(BaseModel):
     status: AnnotationStatus
     person_down: bool = False
     blur_decision: Optional[str] = None
+    embedding_swin: Optional[List[float]] = None
+    blur_metrics: Optional[dict] = None
+    has_mask: Optional[bool] = None
+    patch_id: Optional[str] = None
+    strict: Optional[bool] = Field(default=None, alias="STRICT")
+    meta: Optional[dict] = None
+    labels: Optional[List[str]] = None
 
     model_config = ConfigDict(populate_by_name=True)
 

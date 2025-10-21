@@ -53,6 +53,7 @@ export default function FrameViewer(): JSX.Element {
   const [activeSelection, setActiveSelectionState] = useState<ActiveSelection | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isTrackActionPending, setIsTrackActionPending] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const [hoveredAnnotation, setHoveredAnnotation] = useState<Annotation | null>(null);
   const [hoverCursor, setHoverCursor] = useState<{ x: number; y: number } | null>(null);
 
@@ -651,6 +652,29 @@ useEffect(() => {
     blurFilter,
   ]);
 
+  const handleExportTrack = useCallback(async () => {
+    if (!selectedTrack || !batchKey) {
+      return;
+    }
+    try {
+      setIsExporting(true);
+      const data = await exportTrack(batchKey, selectedTrack);
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${batchKey}_${selectedTrack}_export.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Failed to export track", error);
+    } finally {
+      setIsExporting(false);
+    }
+  }, [batchKey, selectedTrack]);
+
   const handleMarkComplete = useCallback(async () => {
     if (!selectedTrack || isTrackActionPending) {
       return;
@@ -1039,6 +1063,14 @@ useEffect(() => {
                 disabled={isTrackActionPending}
               >
                 Accept From Frame {currentFrame.frame_index.toString().padStart(4, "0")}
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleExportTrack()}
+                className="px-3 py-1.5 text-xs font-medium rounded border border-slate-600 text-slate-300 hover:bg-slate-600/10 transition disabled:opacity-50"
+                disabled={isExporting}
+              >
+                {isExporting ? "Exporting…" : "Export Track JSON"}
               </button>
             </div>
           </div>

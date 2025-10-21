@@ -3,9 +3,11 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime, timezone
-from typing import Dict, List, Literal, Optional
+from typing import Dict, List, Literal, Optional, Sequence, Set
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import JSONResponse
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from ..db import get_database
@@ -36,6 +38,198 @@ logger = logging.getLogger(__name__)
 BlurFilterValue = Literal["all", "sharp", "blurry"]
 
 
+async def _pending_counts_for_tracks(
+    db: AsyncIOMotorDatabase,
+    batch_id,
+    track_tags: Sequence[str],
+) -> Dict[str, int]:
+    if not track_tags:
+        return {}
+    pipeline = [
+        {
+            "$match": {
+                "batch_id": batch_id,
+                "track_tag": {"$in": list(track_tags)},
+            }
+        },
+        {
+            "$group": {
+                "_id": "$track_tag",
+                "pending": {
+                    "$sum": {
+                        "$cond": [
+                            {"$eq": ["$status", "unreviewed"]},
+                            1,
+                            0,
+                        ]
+                    }
+                },
+            }
+        },
+    ]
+    results = await db.annotations.aggregate(pipeline).to_list(length=None)
+    return {entry["_id"]: entry["pending"] for entry in results}
+
+
+async def _collect_annotations_with_metadata(
+    db: AsyncIOMotorDatabase,
+    batch_id,
+    track_tags: Sequence[str],
+) -> List[Dict]:
+    if not track_tags:
+        return []
+    pipeline = [
+        {
+            "$match": {
+                "batch_id": batch_id,
+                "track_tag": {"$in": list(track_tags)},
+            }
+        },
+        {
+            "$lookup": {
+                "from": "frames",
+                "localField": "frame_id",
+                "foreignField": "_id",
+                "as": "frame_doc",
+            }
+        },
+        {"$unwind": {"path": "$frame_doc", "preserveNullAndEmptyArrays": False}},
+        {
+            "$lookup": {
+                "from": "annotation_judgments",
+                "let": {"ann_id": "$_id"},
+                "pipeline": [
+                    {
+                        "$match": {
+                            "$expr": {"$eq": ["$annotation_id", "$$ann_id"]}
+                        }
+                    },
+                    {"$sort": {"created_at": -1}},
+                    {"$limit": 1},
+                ],
+                "as": "latest_judgment",
+            }
+        },
+        {
+            "$unwind": {
+                "path": "$latest_judgment",
+                "preserveNullAndEmptyArrays": True,
+            }
+        },
+    ]
+
+    return await db.annotations.aggregate(pipeline).to_list(length=None)
+
+
+def _normalise_bbox(value) -> List[float]:
+    if isinstance(value, dict):
+        return [
+            float(value.get("x", 0.0)),
+            float(value.get("y", 0.0)),
+            float(value.get("width", 0.0)),
+            float(value.get("height", 0.0)),
+        ]
+    if isinstance(value, (list, tuple)) and len(value) == 4:
+        return [float(v) for v in value]
+    return [0.0, 0.0, 0.0, 0.0]
+
+
+def _build_export_payload(
+    batch_key: str,
+    track_docs: Sequence[Dict],
+    annotation_docs: Sequence[Dict],
+    pending_counts: Optional[Dict[str, int]] = None,
+) -> Dict:
+    images: Dict[str, Dict] = {}
+    categories: Dict[int, Dict] = {}
+    annotations: List[Dict] = []
+
+    for doc in annotation_docs:
+        frame = doc.get("frame_doc")
+        if not frame:
+            continue
+
+        frame_id = str(frame.get("_id"))
+        if frame_id not in images:
+            images[frame_id] = {
+                "id": frame_id,
+                "file_name": frame.get("filename"),
+                "width": frame.get("width"),
+                "height": frame.get("height"),
+                "frame_index": frame.get("frame_index"),
+                "frame_version": frame.get("frame_version"),
+                "gcs_uri": frame.get("gcs_uri"),
+            }
+
+        category_id = doc.get("category_id")
+        if category_id is not None:
+            categories[category_id] = {
+                "id": category_id,
+                "name": doc.get("category_name", ""),
+            }
+
+        latest_status = doc.get("latest_judgment", {}).get("status") or doc.get("status", "unreviewed")
+        annotation_entry = {
+            "id": doc.get("annotation_index") or str(doc.get("_id")),
+            "annotation_id": str(doc.get("_id")),
+            "image_id": frame_id,
+            "track_tag": doc.get("track_tag"),
+            "category_id": category_id,
+            "category_name": doc.get("category_name"),
+            "bbox": _normalise_bbox(doc.get("bbox")),
+            "area": doc.get("area"),
+            "status": latest_status,
+            "confidence": doc.get("confidence"),
+            "person_down": doc.get("person_down", False),
+            "blur_decision": (doc.get("blur_metrics") or {}).get("blur_decision"),
+            "blur_metrics": doc.get("blur_metrics"),
+            "embedding_swin": doc.get("embedding_swin"),
+            "has_mask": doc.get("has_mask"),
+            "patch_id": doc.get("patch_id"),
+            "strict": doc.get("STRICT") if "STRICT" in doc else doc.get("strict"),
+            "meta": doc.get("meta"),
+            "labels": doc.get("labels"),
+            "created_at": doc.get("created_at"),
+            "updated_at": doc.get("updated_at"),
+        }
+        latest_judgment = doc.get("latest_judgment")
+        if latest_judgment:
+            annotation_entry["latest_judgment"] = {
+                "status": latest_judgment.get("status"),
+                "user": latest_judgment.get("user"),
+                "note": latest_judgment.get("note"),
+                "created_at": latest_judgment.get("created_at"),
+            }
+        annotations.append(annotation_entry)
+
+    tracks_summary = []
+    for doc in track_docs:
+        track_tag = doc.get("track_tag")
+        tracks_summary.append(
+            {
+                "track_tag": track_tag,
+                "primary_class": doc.get("primary_class"),
+                "categories": doc.get("categories", []),
+                "person_down": doc.get("person_down", False),
+                "manually_completed": doc.get("manually_completed", False),
+                "status": doc.get("status", "active"),
+                "pending_annotations": (pending_counts or {}).get(track_tag, 0),
+            }
+        )
+
+    return {
+        "info": {
+            "batch_key": batch_key,
+            "exported_at": datetime.now(timezone.utc),
+            "tracks": [doc.get("track_tag") for doc in track_docs],
+        },
+        "images": list(images.values()),
+        "annotations": annotations,
+        "categories": list(categories.values()),
+        "tracks": tracks_summary,
+    }
+
+
 async def _get_batch(db: AsyncIOMotorDatabase, batch_key: str) -> Dict:
     batch = await db.batches.find_one({"batch_key": batch_key})
     if not batch:
@@ -54,6 +248,13 @@ def _annotation_to_response(doc: Dict) -> Dict:
         status=doc.get("status", "unreviewed"),
         person_down=doc.get("person_down", False),
         blur_decision=(doc.get("blur_metrics") or {}).get("blur_decision"),
+        embedding_swin=doc.get("embedding_swin"),
+        blur_metrics=doc.get("blur_metrics"),
+        has_mask=doc.get("has_mask"),
+        patch_id=doc.get("patch_id"),
+        strict=doc.get("STRICT") if "STRICT" in doc else doc.get("strict"),
+        meta=doc.get("meta"),
+        labels=doc.get("labels"),
     )
     return annotation.model_dump(by_alias=True)
 
@@ -720,3 +921,64 @@ async def update_track_person_down(
         person_down=payload.person_down,
         updated=result.modified_count > 0
     )
+
+
+@router.get("/{track_tag}/export")
+async def export_track_data(
+    batch_key: str,
+    track_tag: str,
+    db: AsyncIOMotorDatabase = Depends(get_database),
+) -> JSONResponse:
+    batch = await _get_batch(db, batch_key)
+    track = await db.tracks.find_one({"batch_id": batch["_id"], "track_tag": track_tag})
+    if not track:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Track not found")
+
+    pending_counts = await _pending_counts_for_tracks(db, batch["_id"], [track_tag])
+    annotation_docs = await _collect_annotations_with_metadata(db, batch["_id"], [track_tag])
+    payload = _build_export_payload(batch_key, [track], annotation_docs, pending_counts)
+    return JSONResponse(jsonable_encoder(payload))
+
+
+@router.get("/export")
+async def export_tracks_data(
+    batch_key: str,
+    status_filter: Literal["all", "complete"] = Query("complete"),
+    track_tags: Optional[str] = Query(default=None, description="Comma separated list of track tags"),
+    db: AsyncIOMotorDatabase = Depends(get_database),
+) -> JSONResponse:
+    batch = await _get_batch(db, batch_key)
+
+    track_filter: Dict = {"batch_id": batch["_id"]}
+    requested_tags: Optional[List[str]] = None
+    if track_tags:
+        requested_tags = [tag.strip() for tag in track_tags.split(",") if tag.strip()]
+        if not requested_tags:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No valid track tags provided")
+        track_filter["track_tag"] = {"$in": requested_tags}
+
+    track_docs = await db.tracks.find(track_filter).to_list(length=None)
+    if not track_docs:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No tracks found for export")
+
+    all_track_tags = [doc.get("track_tag") for doc in track_docs if doc.get("track_tag")]
+    pending_counts = await _pending_counts_for_tracks(db, batch["_id"], all_track_tags)
+
+    if status_filter == "complete":
+        filtered_docs = []
+        for doc in track_docs:
+            tag = doc.get("track_tag")
+            if not tag:
+                continue
+            pending = pending_counts.get(tag, 0)
+            if pending == 0 or doc.get("manually_completed", False):
+                filtered_docs.append(doc)
+        track_docs = filtered_docs
+        if not track_docs:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No completed tracks available for export")
+
+    export_tags = [doc.get("track_tag") for doc in track_docs if doc.get("track_tag")]
+    annotation_docs = await _collect_annotations_with_metadata(db, batch["_id"], export_tags)
+
+    payload = _build_export_payload(batch_key, track_docs, annotation_docs, pending_counts)
+    return JSONResponse(jsonable_encoder(payload))
