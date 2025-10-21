@@ -14,40 +14,31 @@ router = APIRouter(prefix="/batches", tags=["batches"])
 
 @router.get("", response_model=List[BatchSummary])
 async def list_batches(db: AsyncIOMotorDatabase = Depends(get_database)) -> List[BatchSummary]:
-    pending_pipeline = [
+    incomplete_pipeline = [
         {
-            "$lookup": {
-                "from": "annotations",
-                "let": {"batch_id": "$batch_id", "track_tag": "$track_tag"},
-                "pipeline": [
-                    {
-                        "$match": {
-                            "$expr": {
-                                "$and": [
-                                    {"$eq": ["$batch_id", "$$batch_id"]},
-                                    {"$eq": ["$track_tag", "$$track_tag"]},
-                                    {"$eq": ["$status", "unreviewed"]},
-                                ]
-                            }
-                        }
-                    },
-                    {"$limit": 1},
-                ],
-                "as": "pending_annotations",
+            "$project": {
+                "batch_id": 1,
+                "is_complete": {
+                    "$cond": [
+                        {
+                            "$or": [
+                                {"$eq": ["$manually_completed", True]},
+                                {"$eq": ["$status", "complete"]},
+                            ]
+                        },
+                        True,
+                        False,
+                    ]
+                },
             }
         },
-        {
-            "$match": {
-                "manually_completed": {"$ne": True},
-                "pending_annotations": {"$ne": []},
-            }
-        },
+        {"$match": {"batch_id": {"$ne": None}, "is_complete": False}},
         {"$group": {"_id": "$batch_id", "count": {"$sum": 1}}},
     ]
 
     incomplete_counts = {
         str(entry["_id"]): entry["count"]
-        for entry in await db.tracks.aggregate(pending_pipeline).to_list(length=None)
+        for entry in await db.tracks.aggregate(incomplete_pipeline).to_list(length=None)
     }
 
     cursor = db.batches.find().sort("created_at", -1)
