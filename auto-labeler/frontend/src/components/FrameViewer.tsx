@@ -2,11 +2,12 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import clsx from "clsx";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { abandonTrack, fetchTrackFrames, fetchTrackSamples, markTrackComplete, markTrackIncomplete, recoverTrack, saveFrame, updateTrackClass, updateTrackPersonDown } from "../api";
+import { abandonTrack, acceptTrack, fetchTrackFrames, fetchTrackSamples, markTrackComplete, markTrackIncomplete, recoverTrack, saveFrame, updateTrackClass, updateTrackPersonDown } from "../api";
 import { useAppState } from "../state/useAppState";
 import type {
   Annotation,
   AnnotationStatus,
+  BlurFilter,
   TrackClass,
   TrackFrameEntry,
   TrackListItem,
@@ -48,6 +49,7 @@ export default function FrameViewer(): JSX.Element {
   const timelineRef = useRef<TrackTimelineHandle | null>(null);
 
   const [samplesLimit, setSamplesLimit] = useState(20);
+  const [blurFilter, setBlurFilter] = useState<BlurFilter>("all");
   const [activeSelection, setActiveSelectionState] = useState<ActiveSelection | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isTrackActionPending, setIsTrackActionPending] = useState(false);
@@ -61,6 +63,15 @@ export default function FrameViewer(): JSX.Element {
       return false;
     }
   }, []);
+
+  const framesQueryKey = useMemo(
+    () => ["track-frames", batchKey, selectedTrack, blurFilter] as const,
+    [batchKey, selectedTrack, blurFilter]
+  );
+  const samplesQueryKey = useMemo(
+    () => ["track-samples", batchKey, selectedTrack, samplesLimit, blurFilter] as const,
+    [batchKey, selectedTrack, samplesLimit, blurFilter]
+  );
 
   const setActiveSelection = useCallback(
     (selection: ActiveSelection | null) => {
@@ -88,18 +99,22 @@ export default function FrameViewer(): JSX.Element {
     [cursor, setCursor, isDev]
   );
 
-  useEffect(() => {
+useEffect(() => {
     setSamplesLimit(20);
     setActiveSelection(null);
   }, [selectedTrack, setActiveSelection]);
+
+  useEffect(() => {
+    setActiveSelection(null);
+  }, [blurFilter, setActiveSelection]);
 
   const {
     data: framesData,
     isLoading: framesLoading,
     isError: framesError,
   } = useQuery<TrackFrameEntry[]>({
-    queryKey: ["track-frames", batchKey, selectedTrack],
-    queryFn: () => fetchTrackFrames(batchKey, selectedTrack!),
+    queryKey: framesQueryKey,
+    queryFn: () => fetchTrackFrames(batchKey, selectedTrack!, blurFilter),
     enabled: Boolean(selectedTrack),
   });
 
@@ -153,8 +168,8 @@ export default function FrameViewer(): JSX.Element {
     isError: samplesError,
     error: samplesErrorObject,
   } = useQuery<TrackSample[]>({
-    queryKey: ["track-samples", batchKey, selectedTrack, samplesLimit],
-    queryFn: () => fetchTrackSamples(batchKey, selectedTrack!, samplesLimit),
+    queryKey: samplesQueryKey,
+    queryFn: () => fetchTrackSamples(batchKey, selectedTrack!, samplesLimit, blurFilter),
     enabled: Boolean(selectedTrack),
   });
 
@@ -169,12 +184,15 @@ export default function FrameViewer(): JSX.Element {
         sample.annotation_id === activeSelection.annotationId &&
         sample.frame_index === activeSelection.frameIndex
     );
-    if (!exists && samplesLimit !== 0 && samplesLimit < MAX_SAMPLES_LIMIT) {
-      setSamplesLimit((limit) =>
-        limit === 0 ? 0 : Math.min(MAX_SAMPLES_LIMIT, Math.max(limit * 2, limit + 20))
-      );
+    if (!exists) {
+      setActiveSelection(null);
+      if (samplesLimit !== 0 && samplesLimit < MAX_SAMPLES_LIMIT) {
+        setSamplesLimit((limit) =>
+          limit === 0 ? 0 : Math.min(MAX_SAMPLES_LIMIT, Math.max(limit * 2, limit + 20))
+        );
+      }
     }
-  }, [trackSamples, activeSelection, samplesLimit]);
+  }, [trackSamples, activeSelection, samplesLimit, setActiveSelection]);
 
   const highlightedSampleKey = useMemo(() => {
     if (!activeSelection) {
@@ -340,7 +358,7 @@ export default function FrameViewer(): JSX.Element {
         });
 
         queryClient.setQueryData<TrackSample[]>(
-          ["track-samples", batchKey, selectedTrack, samplesLimit],
+          samplesQueryKey,
           (existing) =>
             existing?.map((sample) =>
               sample.annotation_id === annotation.annotation_id &&
@@ -351,7 +369,7 @@ export default function FrameViewer(): JSX.Element {
         );
 
         queryClient.setQueryData<TrackFrameEntry[]>(
-          ["track-frames", batchKey, selectedTrack],
+          framesQueryKey,
           (existing) =>
             existing?.map((frame, idx) => {
               if (idx !== entry.frameListIndex) {
@@ -393,6 +411,9 @@ export default function FrameViewer(): JSX.Element {
       batchKey,
       queryClient,
       samplesLimit,
+      blurFilter,
+      samplesQueryKey,
+      framesQueryKey,
     ]
   );
 
@@ -421,7 +442,7 @@ export default function FrameViewer(): JSX.Element {
 
       const fromIndex = currentFrame.frame_index;
       queryClient.setQueryData<TrackSample[]>(
-        ["track-samples", batchKey, selectedTrack, samplesLimit],
+        samplesQueryKey,
         (existing) =>
           existing?.map((sample) =>
             sample.frame_index >= fromIndex ? { ...sample, status: "abandoned" } : sample
@@ -437,7 +458,78 @@ export default function FrameViewer(): JSX.Element {
     } finally {
       setIsTrackActionPending(false);
     }
-  }, [selectedTrack, currentFrame, isTrackActionPending, batchKey, samplesLimit, queryClient, setActiveSelection]);
+  }, [
+    selectedTrack,
+    currentFrame,
+    isTrackActionPending,
+    batchKey,
+    samplesQueryKey,
+    queryClient,
+    setActiveSelection,
+  ]);
+
+  const handleAcceptFromFrame = useCallback(async () => {
+    if (!selectedTrack || !currentFrame || isTrackActionPending) {
+      return;
+    }
+    try {
+      setIsTrackActionPending(true);
+      await acceptTrack(batchKey, selectedTrack, {
+        from_frame_index: currentFrame.frame_index,
+      });
+
+      const fromIndex = currentFrame.frame_index;
+      queryClient.setQueryData<TrackSample[]>(
+        samplesQueryKey,
+        (existing) =>
+          existing?.map((sample) =>
+            sample.frame_index >= fromIndex ? { ...sample, status: "accepted" } : sample
+          ) ?? existing
+      );
+
+      queryClient.setQueryData<TrackFrameEntry[]>(
+        framesQueryKey,
+        (existing) =>
+          existing?.map((frame) => {
+            if (frame.frame_index < fromIndex) {
+              return frame;
+            }
+            const annotations = frame.annotations.map((ann) => ({ ...ann, status: "accepted" as AnnotationStatus }));
+            const pending = annotations.filter((ann) => ann.status === "unreviewed").length;
+            const accepted = annotations.filter((ann) => ann.status === "accepted").length;
+            const rejected = annotations.filter((ann) => ann.status === "rejected").length;
+            const abandoned = annotations.filter((ann) => ann.status === "abandoned").length;
+            return {
+              ...frame,
+              annotations,
+              pending_annotations: pending,
+              accepted_annotations: accepted,
+              rejected_annotations: rejected,
+              abandoned_annotations: abandoned,
+              completed: pending === 0,
+            };
+          }) ?? existing
+      );
+
+      queryClient.invalidateQueries({ queryKey: ["track-frames", batchKey, selectedTrack] });
+      queryClient.invalidateQueries({ queryKey: ["track-samples", batchKey, selectedTrack] });
+      queryClient.invalidateQueries({ queryKey: ["tracks", batchKey] });
+      setActiveSelection(null);
+    } catch (error) {
+      console.error("Failed to accept track annotations", error);
+    } finally {
+      setIsTrackActionPending(false);
+    }
+  }, [
+    selectedTrack,
+    currentFrame,
+    isTrackActionPending,
+    batchKey,
+    queryClient,
+    samplesQueryKey,
+    framesQueryKey,
+    setActiveSelection,
+  ]);
 
   const handleRecoverTrack = useCallback(async () => {
     if (!selectedTrack || !currentFrame || isTrackActionPending) {
@@ -451,7 +543,7 @@ export default function FrameViewer(): JSX.Element {
 
       const fromIndex = currentFrame.frame_index;
       queryClient.setQueryData<TrackSample[]>(
-        ["track-samples", batchKey, selectedTrack, samplesLimit],
+        samplesQueryKey,
         (existing) =>
           existing?.map((sample) =>
             sample.frame_index >= fromIndex
@@ -461,7 +553,7 @@ export default function FrameViewer(): JSX.Element {
       );
 
       queryClient.setQueryData<TrackFrameEntry[]>(
-        ["track-frames", batchKey, selectedTrack],
+        framesQueryKey,
         (existing) =>
           existing?.map((frame) => {
             if (frame.frame_index < fromIndex) {
@@ -517,7 +609,8 @@ export default function FrameViewer(): JSX.Element {
     isTrackActionPending,
     batchKey,
     queryClient,
-    samplesLimit,
+    samplesQueryKey,
+    framesQueryKey,
     setActiveSelection,
   ]);
 
@@ -627,7 +720,7 @@ export default function FrameViewer(): JSX.Element {
       console.log('[DEBUG] person_down save successful');
 
       queryClient.setQueryData<TrackSample[]>(
-        ["track-samples", batchKey, selectedTrack, samplesLimit],
+        samplesQueryKey,
         (existing) =>
           existing?.map((sample) =>
             sample.annotation_id === annotation.annotation_id &&
@@ -638,7 +731,7 @@ export default function FrameViewer(): JSX.Element {
       );
 
       queryClient.setQueryData<TrackFrameEntry[]>(
-        ["track-frames", batchKey, selectedTrack],
+        framesQueryKey,
         (existing) =>
           existing?.map((frame, idx) => {
             if (idx !== entry.frameListIndex) {
@@ -662,7 +755,17 @@ export default function FrameViewer(): JSX.Element {
     } finally {
       setIsSaving(false);
     }
-  }, [selectedTrack, activeSelection, frames, isSaving, findAnnotationEntry, batchKey, queryClient, samplesLimit]);
+  }, [
+    selectedTrack,
+    activeSelection,
+    frames,
+    isSaving,
+    findAnnotationEntry,
+    batchKey,
+    queryClient,
+    samplesQueryKey,
+    framesQueryKey,
+  ]);
 
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
@@ -892,6 +995,14 @@ export default function FrameViewer(): JSX.Element {
                   Abandon From Frame {currentFrame.frame_index.toString().padStart(4, "0")}
                 </button>
               )}
+              <button
+                type="button"
+                onClick={() => void handleAcceptFromFrame()}
+                className="px-3 py-1.5 text-xs font-medium rounded border border-emerald-600 text-emerald-300 hover:bg-emerald-600/10 transition disabled:opacity-50"
+                disabled={isTrackActionPending}
+              >
+                Accept From Frame {currentFrame.frame_index.toString().padStart(4, "0")}
+              </button>
             </div>
           </div>
         </div>
@@ -923,6 +1034,8 @@ export default function FrameViewer(): JSX.Element {
               totalCount={totalAnnotations}
               limit={samplesLimit}
               onLimitChange={setSamplesLimit}
+              blurFilter={blurFilter}
+              onBlurFilterChange={(value) => setBlurFilter(value)}
               onSelectSample={handleSelectSample}
               highlightedSampleKey={highlightedSampleKey}
               loading={samplesLoading}

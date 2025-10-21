@@ -3,6 +3,8 @@ import { useMemo } from "react";
 
 import type { TrackSample } from "../types";
 
+export type BlurFilterValue = "all" | "sharp" | "blurry";
+
 const LIMIT_OPTIONS: Array<{ label: string; value: number }> = [
   { label: "20", value: 20 },
   { label: "40", value: 40 },
@@ -14,6 +16,12 @@ const LIMIT_OPTIONS: Array<{ label: string; value: number }> = [
   { label: "All", value: 0 },
 ];
 
+const BLUR_FILTER_OPTIONS: Array<{ label: string; value: BlurFilterValue }> = [
+  { label: "Sharp + Blurry", value: "all" },
+  { label: "Sharp", value: "sharp" },
+  { label: "Blurry", value: "blurry" },
+];
+
 interface TrackSamplesProps {
   samples: TrackSample[];
   totalCount: number;
@@ -23,6 +31,8 @@ interface TrackSamplesProps {
   highlightedSampleKey?: string | null;
   loading?: boolean;
   errorMessage?: string;
+  blurFilter: BlurFilterValue;
+  onBlurFilterChange: (filter: BlurFilterValue) => void;
 }
 
 export default function TrackSamples({
@@ -34,27 +44,45 @@ export default function TrackSamples({
   highlightedSampleKey = null,
   loading = false,
   errorMessage,
+  blurFilter,
+  onBlurFilterChange,
 }: TrackSamplesProps): JSX.Element {
   const hasSamples = samples.length > 0;
 
   return (
     <section className="mt-6" id="track-samples">
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
         <h3 className="text-sm font-semibold text-slate-200">Track Patches</h3>
-        <label className="flex items-center gap-2 text-xs text-slate-400">
-          Show
-          <select
-            className="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs focus:outline-none focus:ring focus:ring-emerald-500/40"
-            value={limit}
-            onChange={(event) => onLimitChange(Number(event.target.value))}
-          >
-            {LIMIT_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className="flex items-center gap-3 text-xs text-slate-400">
+          <label className="flex items-center gap-2">
+            Blur
+            <select
+              className="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs focus:outline-none focus:ring focus:ring-emerald-500/40"
+              value={blurFilter}
+              onChange={(event) => onBlurFilterChange(event.target.value as BlurFilterValue)}
+            >
+              {BLUR_FILTER_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex items-center gap-2">
+            Show
+            <select
+              className="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs focus:outline-none focus:ring focus:ring-emerald-500/40"
+              value={limit}
+              onChange={(event) => onLimitChange(Number(event.target.value))}
+            >
+              {LIMIT_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
       </div>
       {errorMessage && <div className="mb-3 text-xs text-amber-300">{errorMessage}</div>}
       {loading && !hasSamples ? (
@@ -174,6 +202,20 @@ function PatchCard({ sample, onSelect, highlightedKey }: PatchCardProps): JSX.El
           {Math.round(sample.bbox.width)}×{Math.round(sample.bbox.height)}
         </span>
       </div>
+      {sample.blur_decision && (
+        <div className="mt-1">
+          <span
+            className={clsx(
+              "inline-flex items-center rounded-full px-1.5 py-0.5 text-[9px] font-medium",
+              sample.blur_decision === "sharp"
+                ? "bg-emerald-500/10 text-emerald-300 border border-emerald-400/40"
+                : "bg-amber-500/10 text-amber-300 border border-amber-400/40"
+            )}
+          >
+            {sample.blur_decision.toUpperCase()}
+          </span>
+        </div>
+      )}
       {sample.person_down && (
         <div className="mt-1">
           <span className="inline-flex items-center rounded-full px-1.5 py-0.5 text-[9px] font-medium bg-orange-500/20 text-orange-300">

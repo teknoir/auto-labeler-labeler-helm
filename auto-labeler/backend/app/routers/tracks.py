@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime, timezone
-from typing import Dict, List, Optional
+from typing import Dict, List, Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from motor.motor_asyncio import AsyncIOMotorDatabase
@@ -15,6 +15,7 @@ from ..schemas import (
     BBox,
     TrackAbandonRequest,
     TrackAbandonResponse,
+    TrackAcceptRequest,
     TrackClassUpdateRequest,
     TrackClassUpdateResponse,
     TrackCompleteRequest,
@@ -31,6 +32,8 @@ from ..utils import object_id_str
 
 router = APIRouter(prefix="/batches/{batch_key}/tracks", tags=["tracks"])
 logger = logging.getLogger(__name__)
+
+BlurFilterValue = Literal["all", "sharp", "blurry"]
 
 
 async def _get_batch(db: AsyncIOMotorDatabase, batch_key: str) -> Dict:
@@ -50,8 +53,17 @@ def _annotation_to_response(doc: Dict) -> Dict:
         confidence=doc.get("confidence"),
         status=doc.get("status", "unreviewed"),
         person_down=doc.get("person_down", False),
+        blur_decision=(doc.get("blur_metrics") or {}).get("blur_decision"),
     )
     return annotation.model_dump(by_alias=True)
+
+
+def _build_blur_filter_query(blur_filter: BlurFilterValue) -> Dict[str, str]:
+    if blur_filter == "sharp":
+        return {"blur_metrics.blur_decision": "sharp"}
+    if blur_filter == "blurry":
+        return {"blur_metrics.blur_decision": "blurry"}
+    return {}
 
 
 @router.get("", response_model=List[TrackListItem])
@@ -114,6 +126,7 @@ async def list_tracks(
 async def get_track_frames(
     batch_key: str,
     track_tag: str,
+    blur: BlurFilterValue = Query(default="all"),
     db: AsyncIOMotorDatabase = Depends(get_database),
 ) -> List[TrackFrameDetail]:
     batch = await _get_batch(db, batch_key)
@@ -122,6 +135,7 @@ async def get_track_frames(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Track not found")
 
     filter_query = {"batch_id": batch["_id"], "track_tag": track_tag}
+    filter_query.update(_build_blur_filter_query(blur))
     annotations = await db.annotations.find(filter_query).to_list(length=None)
     if not annotations:
         return []
@@ -185,6 +199,7 @@ async def get_track_samples(
     batch_key: str,
     track_tag: str,
     limit: int = Query(default=20, ge=0, le=2000),
+    blur: BlurFilterValue = Query(default="all"),
     db: AsyncIOMotorDatabase = Depends(get_database),
 ) -> List[TrackSample]:
     try:
@@ -194,9 +209,11 @@ async def get_track_samples(
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Track not found")
 
         projection = {"embedding_swin": False}
+        annotation_query = {"batch_id": batch["_id"], "track_tag": track_tag}
+        annotation_query.update(_build_blur_filter_query(blur))
         cursor = (
             db.annotations
-            .find({"batch_id": batch["_id"], "track_tag": track_tag}, projection=projection)
+            .find(annotation_query, projection=projection)
             .sort([("frame_id", 1), ("annotation_index", 1)])
         )
         if limit > 0:
@@ -248,6 +265,7 @@ async def get_track_samples(
                     person_down=ann.get("person_down", False),
                     frame_width=frame_doc.get("width"),
                     frame_height=frame_doc.get("height"),
+                    blur_decision=(ann.get("blur_metrics") or {}).get("blur_decision"),
                 )
             )
 
@@ -272,6 +290,7 @@ async def abandon_track(
     batch_key: str,
     track_tag: str,
     payload: TrackAbandonRequest,
+    blur: BlurFilterValue = Query(default="all"),
     db: AsyncIOMotorDatabase = Depends(get_database),
 ) -> TrackAbandonResponse:
     batch = await _get_batch(db, batch_key)
@@ -296,6 +315,10 @@ async def abandon_track(
         for ann in annotations
         if frame_lookup.get(ann["frame_id"])
         and frame_lookup[ann["frame_id"]].get("frame_index", 0) >= payload.from_frame_index
+        and (
+            blur == "all"
+            or (ann.get("blur_metrics") or {}).get("blur_decision") == blur
+        )
     ]
 
     if not filtered_annotations:
@@ -364,6 +387,109 @@ async def abandon_track(
     )
 
     return TrackAbandonResponse(updated_annotations=len(annotation_ids), track_status="abandoned")
+
+
+@router.post("/{track_tag}/accept", response_model=TrackAbandonResponse)
+async def accept_track(
+    batch_key: str,
+    track_tag: str,
+    payload: TrackAcceptRequest,
+    blur: BlurFilterValue = Query(default="all"),
+    db: AsyncIOMotorDatabase = Depends(get_database),
+) -> TrackAbandonResponse:
+    batch = await _get_batch(db, batch_key)
+    track = await db.tracks.find_one({"batch_id": batch["_id"], "track_tag": track_tag})
+    if not track:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Track not found")
+
+    annotations = await db.annotations.find({
+        "batch_id": batch["_id"],
+        "track_tag": track_tag,
+    }).to_list(length=None)
+
+    if not annotations:
+        return TrackAbandonResponse(updated_annotations=0, track_status=track.get("status", "active"))
+
+    frame_ids = {ann["frame_id"] for ann in annotations}
+    frame_docs = await db.frames.find({"_id": {"$in": list(frame_ids)}}).to_list(length=None)
+    frame_lookup = {doc["_id"]: doc for doc in frame_docs}
+
+    filtered_annotations = [
+        ann
+        for ann in annotations
+        if frame_lookup.get(ann["frame_id"])
+        and frame_lookup[ann["frame_id"]].get("frame_index", 0) >= payload.from_frame_index
+        and (
+            blur == "all"
+            or (ann.get("blur_metrics") or {}).get("blur_decision") == blur
+        )
+    ]
+
+    if not filtered_annotations:
+        return TrackAbandonResponse(updated_annotations=0, track_status=track.get("status", "active"))
+
+    frame_ids_to_update = {ann["frame_id"] for ann in filtered_annotations}
+    relevant_frames = [frame_lookup[fid] for fid in frame_ids_to_update if fid in frame_lookup]
+
+    now = datetime.now(timezone.utc)
+
+    annotation_ids = [ann["_id"] for ann in filtered_annotations]
+    await db.annotations.update_many(
+        {"_id": {"$in": annotation_ids}},
+        {"$set": {"status": "accepted", "updated_at": now}, "$unset": {"abandoned": ""}},
+    )
+
+    frame_versions = {doc["_id"]: doc.get("frame_version", 0) for doc in relevant_frames}
+    new_versions: Dict = {}
+    for doc in relevant_frames:
+        result = await db.frames.update_one(
+            {"_id": doc["_id"], "frame_version": doc.get("frame_version", 0)},
+            {
+                "$inc": {"frame_version": 1},
+                "$set": {
+                    "updated_at": now,
+                    "last_saved_by": payload.user,
+                    "last_note": payload.reason,
+                },
+            },
+        )
+        if result.modified_count == 0:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Frame version conflict while accepting track",
+            )
+        new_versions[doc["_id"]] = doc.get("frame_version", 0) + 1
+
+    judgments = []
+    for ann in filtered_annotations:
+        judgments.append(
+            {
+                "batch_id": batch["_id"],
+                "frame_id": ann["frame_id"],
+                "annotation_id": ann["_id"],
+                "status": "accepted",
+                "frame_version": new_versions.get(ann["frame_id"], frame_versions.get(ann["frame_id"], 0)),
+                "user": payload.user,
+                "note": payload.reason,
+                "created_at": now,
+            }
+        )
+    if judgments:
+        await db.annotation_judgments.insert_many(judgments)
+
+    await db.tracks.update_one(
+        {"_id": track["_id"]},
+        {
+            "$set": {
+                "status": "active",
+                "updated_at": now,
+                "updated_by": payload.user,
+            },
+            "$unset": {"abandoned_from_frame": "", "abandon_reason": ""},
+        },
+    )
+
+    return TrackAbandonResponse(updated_annotations=len(annotation_ids), track_status="active")
 
 
 @router.post("/{track_tag}/recover", response_model=TrackRecoverResponse)

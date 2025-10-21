@@ -26,6 +26,7 @@ class AnnotationOut(BaseModel):
     confidence: Optional[float]
     status: AnnotationStatus
     person_down: bool = False
+    blur_decision: Optional[str] = None
 
     model_config = ConfigDict(populate_by_name=True)
 
@@ -145,6 +146,12 @@ class TrackRecoverResponse(BaseModel):
     track_status: str
 
 
+class TrackAcceptRequest(BaseModel):
+    from_frame_index: int
+    user: Optional[str] = None
+    reason: Optional[str] = None
+
+
 class TrackSample(BaseModel):
     annotation_id: str
     frame_id: str
@@ -158,6 +165,7 @@ class TrackSample(BaseModel):
     person_down: bool = False
     frame_width: Optional[int] = None
     frame_height: Optional[int] = None
+    blur_decision: Optional[str] = None
 
 
 class TrackCompleteRequest(BaseModel):

@@ -11,6 +11,7 @@ import type {
   TrackPersonDownPayload,
   TrackRecoverPayload,
   TrackSample,
+  BlurFilter,
 } from "./types";
 
 // Use Vite's base path for API calls
@@ -49,19 +50,27 @@ export async function fetchTracks(batchKey: string): Promise<TrackListItem[]> {
 
 export async function fetchTrackFrames(
   batchKey: string,
-  trackTag: string
+  trackTag: string,
+  blur: BlurFilter = "all"
 ): Promise<TrackFrameEntry[]> {
-  const res = await fetch(`${API_ROOT}/batches/${batchKey}/tracks/${encodeURIComponent(trackTag)}/frames`);
+  const params = new URLSearchParams({ blur });
+  const res = await fetch(
+    `${API_ROOT}/batches/${batchKey}/tracks/${encodeURIComponent(trackTag)}/frames?${params.toString()}`
+  );
   return handleResponse(res);
 }
 
 export async function fetchTrackSamples(
   batchKey: string,
   trackTag: string,
-  limit = 20
+  limit = 20,
+  blur: BlurFilter = "all"
 ): Promise<TrackSample[]> {
+  const params = new URLSearchParams();
+  params.set("limit", String(limit));
+  params.set("blur", blur);
   const res = await fetch(
-    `${API_ROOT}/batches/${batchKey}/tracks/${encodeURIComponent(trackTag)}/samples?limit=${limit}`
+    `${API_ROOT}/batches/${batchKey}/tracks/${encodeURIComponent(trackTag)}/samples?${params.toString()}`
   );
   return handleResponse(res);
 }
@@ -98,6 +107,19 @@ export async function recoverTrack(
   payload: TrackRecoverPayload
 ): Promise<{ updated_annotations: number; track_status: string }> {
   const res = await fetch(`${API_ROOT}/batches/${batchKey}/tracks/${encodeURIComponent(trackTag)}/recover`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  return handleResponse(res);
+}
+
+export async function acceptTrack(
+  batchKey: string,
+  trackTag: string,
+  payload: TrackAbandonPayload
+): Promise<{ updated_annotations: number; track_status: string }> {
+  const res = await fetch(`${API_ROOT}/batches/${batchKey}/tracks/${encodeURIComponent(trackTag)}/accept`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
