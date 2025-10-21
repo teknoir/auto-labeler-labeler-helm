@@ -143,4 +143,5 @@ export interface BatchSummary {
   frame_count: number;
   annotation_count: number;
   created_at?: string | null;
+  incomplete_tracks?: number;
 }

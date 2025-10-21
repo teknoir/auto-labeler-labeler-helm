@@ -17,6 +17,9 @@ export default function TrackList(): JSX.Element {
     queryFn: fetchBatches,
   });
 
+  const currentBatch = batches?.find((batch) => batch.batch_key === batchKey);
+  const currentIncomplete = currentBatch?.incomplete_tracks ?? 0;
+
   const { data: tracks, isLoading: tracksLoading } = useQuery<TrackListItem[]>({
     queryKey: ["tracks", batchKey],
     queryFn: () => fetchTracks(batchKey),
@@ -35,7 +38,12 @@ export default function TrackList(): JSX.Element {
   return (
     <aside className="w-72 flex-none border-r border-slate-800 bg-slate-950/80 overflow-y-auto">
       <div className="p-4 border-b border-slate-800">
-        <h2 className="text-lg font-semibold mb-3">Tracks</h2>
+        <h2 className="text-lg font-semibold mb-1">Tracks</h2>
+        {currentBatch && (
+          <p className="text-xs text-slate-400 mb-2">
+            {currentBatch.batch_key} · {currentIncomplete > 0 ? `${currentIncomplete} incomplete` : "All complete"}
+          </p>
+        )}
         <label className="flex flex-col gap-1 text-xs text-slate-400">
           <span className="uppercase tracking-wide text-[10px] text-slate-500">Batch</span>
           <select
@@ -46,7 +54,7 @@ export default function TrackList(): JSX.Element {
           >
             {(batches ?? []).map((batch) => (
               <option key={batch.batch_key} value={batch.batch_key}>
-                {batch.batch_key} ({batch.frame_count} frames)
+                {batch.batch_key} · {batch.incomplete_tracks ?? 0} incomplete
               </option>
             ))}
           </select>

@@ -55,6 +55,7 @@ class BatchSummary(BaseModel):
     frame_count: int = 0
     annotation_count: int = 0
     created_at: Optional[datetime] = None
+    incomplete_tracks: int = 0
 
 
 class TrackListItem(BaseModel):
