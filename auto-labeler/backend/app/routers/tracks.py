@@ -326,7 +326,8 @@ async def list_tracks(
                 abandoned_from_frame=track.get("abandoned_from_frame"),
                 last_updated_at=last_updated_at,
                 completed=(pending_annotations == 0 and total_annotations > 0)
-                or track.get("status") == "abandoned",
+                or track.get("status") == "complete"
+                or track.get("manually_completed", False),
                 manually_completed=track.get("manually_completed", False),
             )
         )

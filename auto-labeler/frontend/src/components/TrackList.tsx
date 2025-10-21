@@ -124,9 +124,6 @@ export default function TrackList(): JSX.Element {
 }
 
 function getBadge(track: TrackListItem, remaining: number, total: number) {
-  if (track.status === "abandoned") {
-    return { label: "Abandoned", className: "bg-amber-500/20 text-amber-300" };
-  }
   if (track.manually_completed) {
     return { label: "Completed", className: "bg-blue-500/20 text-blue-300" };
   }
