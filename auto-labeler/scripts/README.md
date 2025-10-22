@@ -8,18 +8,23 @@ pipelines.
 ## Prerequisites
 
 - Port-forwarded access to the backend API (for production clusters run
-  `auto-labeler/setup_export.sh`, which handles the kubectl tunnel).
+  `auto-labeler/scripts/export_batches.sh`, which handles the kubectl tunnel).
 - A Python environment with `requests` installed.
 - Optional: set `EXPORT_API_BASE` if the API lives behind a non-default
   hostname or path (defaults to
   `http://localhost:8081/dataset-curation/auto-labeler-labeler/api` to match
   our port-forward).
 
+## Installation
+
+- Download `export_batches.sh` and `export_via_api.py`
+
+
 ## Running the Export
 
 ```bash
 # Port-forward the backend and run the bulk export.
-./auto-labeler/setup_export.sh
+./auto-labeler/scripts/export_batches.sh
 ```
 
 The script fetches the batch list, hits
@@ -30,13 +35,13 @@ If a batch has no completed tracks the exporter logs a skip.
 To target specific batches:
 
 ```bash
-EXPORT_BATCH_KEY="guns_1016205,tattoo2k25" ./auto-labeler/setup_export.sh
+EXPORT_BATCH_KEY="guns_1016205,tattoo2k25" ./auto-labeler/scripts/export_batches.sh
 ```
 
 To change the filter (e.g. include unfinished tracks):
 
 ```bash
-EXPORT_STATUS_FILTER=all ./auto-labeler/setup_export.sh
+EXPORT_STATUS_FILTER=all ./auto-labeler/scripts/export_batches.sh
 ```
 
 ## Direct Script Usage
@@ -74,4 +79,3 @@ Each JSON file mirrors the API payload:
 - Empty JSON file (skip message) – no tracks satisfy the status filter.
 - Network errors – ensure port forwarding is active or point `EXPORT_API_BASE`
   at a reachable host.
-
