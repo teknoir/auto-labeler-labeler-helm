@@ -58,3 +58,25 @@ kubectl create secret generic auto-labeler-backend-gcs \
        --from-file=auto-label-backend.json=/path/to/auto-label-backend.json \
        -n <namespace>
 ```
+
+## Exporting Completed Tracks
+
+To archive reviewer output, run the bulk export helper. The script handles
+port-forwarding and writes one JSON file per batch with completed tracks.
+
+```bash
+./auto-labeler/setup_export.sh
+```
+
+See `auto-labeler/scripts/README.md` for environment overrides (e.g. limiting to
+specific batches or changing the status filter) and troubleshooting tips.
+
+## Monitoring Deployments
+
+Keep an eye on rollouts and runtime logs with:
+
+```bash
+kubectl -n dataset-curation logs -f deployment/auto-labeler-frontend   # monitor FE logs
+kubectl -n dataset-curation logs -f deployment/auto-labeler-backend    # monitor BE logs
+watch kubectl -n dataset-curation get pods                             # monitor deployment progress
+```
