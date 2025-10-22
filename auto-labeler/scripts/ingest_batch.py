@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import io
 import json
+import os
 from collections import Counter, defaultdict
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -512,6 +513,9 @@ def _process_batch_plan(
 
     image_cache: Dict[int, Image.Image] = {}
 
+    debug_blur = bool(os.environ.get("INGEST_DEBUG_BLUR"))
+    debug_counter = 0
+
     for ann in tqdm(annotations_subset, desc=f"Annotations[{plan.key}]", unit="ann", leave=False):
         frame_id = source_id_to_frame_id.get(ann["image_id"])
         if frame_id is None:
@@ -605,6 +609,30 @@ def _process_batch_plan(
         ):
             if extra_field in ann:
                 annotation_doc[extra_field] = ann[extra_field]
+        blur_decision_value = ann.get("blur_decision")
+        if blur_decision_value is None:
+            blur_metrics = ann.get("blur_metrics") or {}
+            if isinstance(blur_metrics, dict):
+                blur_decision_value = blur_metrics.get("blur_decision")
+        if blur_decision_value is not None:
+            annotation_doc["blur_decision"] = blur_decision_value
+        if debug_blur and debug_counter < 50:
+            if "blur_metrics" in ann:
+                click.echo(
+                    f"[blur-debug] ann_id={ann.get('id')} decision_src={ann.get('blur_decision')} "
+                    f"metrics_decision={(ann.get('blur_metrics') or {}).get('blur_decision')} "
+                    f"stored={annotation_doc.get('blur_decision')}"
+                )
+            elif blur_decision_value is not None:
+                click.echo(
+                    f"[blur-debug] ann_id={ann.get('id')} stored_decision={annotation_doc.get('blur_decision')} "
+                    f"(no blur_metrics field present)"
+                )
+            else:
+                click.echo(
+                    f"[blur-debug] ann_id={ann.get('id')} has no blur fields"
+                )
+            debug_counter += 1
         annotation_docs.append(annotation_doc)
 
     for cached_image in image_cache.values():

@@ -249,6 +249,8 @@ async def _get_batch(db: AsyncIOMotorDatabase, batch_key: str) -> Dict:
 
 
 def _annotation_to_response(doc: Dict) -> Dict:
+    blur_data = doc.get("blur_metrics") or {}
+    blur_decision = doc.get("blur_decision") or blur_data.get("blur_decision")
     annotation = AnnotationOut(
         annotation_id=object_id_str(doc["_id"]),
         track_tag=doc.get("track_tag"),
@@ -258,9 +260,9 @@ def _annotation_to_response(doc: Dict) -> Dict:
         confidence=doc.get("confidence"),
         status=doc.get("status", "unreviewed"),
         person_down=doc.get("person_down", False),
-        blur_decision=(doc.get("blur_metrics") or {}).get("blur_decision"),
+        blur_decision=blur_decision,
         embedding_swin=doc.get("embedding_swin"),
-        blur_metrics=doc.get("blur_metrics"),
+        blur_metrics=blur_data if blur_data else None,
         has_mask=doc.get("has_mask"),
         patch_id=doc.get("patch_id"),
         strict=doc.get("STRICT") if "STRICT" in doc else doc.get("strict"),
@@ -464,6 +466,8 @@ async def get_track_samples(
             except Exception:
                 continue
             patch_image_url = get_image_url(patch_gcs_uri) if patch_gcs_uri else None
+            blur_data = ann.get("blur_metrics") or {}
+            blur_decision = ann.get("blur_decision") or blur_data.get("blur_decision")
             samples.append(
                 TrackSample(
                     annotation_id=object_id_str(ann["_id"]),
@@ -478,7 +482,8 @@ async def get_track_samples(
                     person_down=ann.get("person_down", False),
                     frame_width=frame_doc.get("width"),
                     frame_height=frame_doc.get("height"),
-                    blur_decision=(ann.get("blur_metrics") or {}).get("blur_decision"),
+                    blur_decision=blur_decision,
+                    blur_metrics=blur_data if blur_data else None,
                 )
             )
 

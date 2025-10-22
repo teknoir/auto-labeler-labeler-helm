@@ -18,10 +18,10 @@ spec:
     backend:
       image:
         repository: us-docker.pkg.dev/teknoir/gcr.io/auto-labeler-backend
-        tag: latest-local-20251020-093510
+        tag: latest-local-20251021-155032
     frontend:
       service:
         port: 5173
       image:
         repository: us-docker.pkg.dev/teknoir/gcr.io/auto-labeler-frontend
-        tag: latest-local-20251020-093510
+        tag: latest-local-20251021-155032

@@ -174,6 +174,7 @@ class TrackSample(BaseModel):
     frame_width: Optional[int] = None
     frame_height: Optional[int] = None
     blur_decision: Optional[str] = None
+    blur_metrics: Optional[dict] = None
 
 
 class TrackCompleteRequest(BaseModel):

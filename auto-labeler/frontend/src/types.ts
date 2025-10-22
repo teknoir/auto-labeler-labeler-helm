@@ -7,6 +7,14 @@ export const TRACK_CLASSES: TrackClass[] = ["gun", "tablet", "person", "face_cov
 export type BlurDecision = "sharp" | "blurry";
 export type BlurFilter = "all" | BlurDecision;
 
+export interface BlurMetrics {
+  blur_decision?: BlurDecision | null;
+  blur_lap_var?: number | null;
+  blur_tenengrad?: number | null;
+  blur_hf_energy?: number | null;
+  blur_cpbd?: number | null;
+}
+
 export interface BBox {
   x: number;
   y: number;
@@ -24,6 +32,7 @@ export interface Annotation {
   status: AnnotationStatus;
   person_down?: boolean;
   blur_decision?: BlurDecision | null;
+  blur_metrics?: BlurMetrics | null;
 }
 
 export interface FrameSummary {
@@ -135,6 +144,7 @@ export interface TrackSample {
   frame_width?: number | null;
   frame_height?: number | null;
   blur_decision?: BlurDecision | null;
+  blur_metrics?: BlurMetrics | null;
 }
 
 export interface BatchSummary {

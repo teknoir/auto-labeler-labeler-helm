@@ -7,6 +7,7 @@ import { useAppState } from "../state/useAppState";
 import type {
   Annotation,
   AnnotationStatus,
+  BlurDecision,
   BlurFilter,
   TrackClass,
   TrackFrameEntry,
@@ -39,6 +40,12 @@ type ActiveSelection = {
   frameIndex: number;
   annotationId: string;
 };
+
+const getAnnotationBlurDecision = (annotation: Annotation): BlurDecision | null =>
+  annotation.blur_decision ?? annotation.blur_metrics?.blur_decision ?? null;
+
+const getSampleBlurDecision = (sample: TrackSample): BlurDecision | null =>
+  sample.blur_decision ?? sample.blur_metrics?.blur_decision ?? null;
 
 export default function FrameViewer(): JSX.Element {
   const batchKey = useAppState((state) => state.batchKey);
@@ -452,7 +459,7 @@ useEffect(() => {
         (existing) =>
           existing?.map((sample) =>
             sample.frame_index >= fromIndex &&
-            (blurFilter === "all" || sample.blur_decision === blurFilter)
+            (blurFilter === "all" || getSampleBlurDecision(sample) === blurFilter)
               ? { ...sample, status: "abandoned" }
               : sample
           ) ?? existing
@@ -499,7 +506,7 @@ useEffect(() => {
         (existing) =>
           existing?.map((sample) =>
             sample.frame_index >= fromIndex &&
-            (blurFilter === "all" || sample.blur_decision === blurFilter)
+            (blurFilter === "all" || getSampleBlurDecision(sample) === blurFilter)
               ? { ...sample, status: "accepted" }
               : sample
           ) ?? existing
@@ -514,8 +521,7 @@ useEffect(() => {
             }
             const annotations = frame.annotations.map((ann) => {
               const matchesBlur =
-                blurFilter === "all" ||
-                ((ann as Annotation & { blur_decision?: string }).blur_decision ?? null) === blurFilter;
+                blurFilter === "all" || getAnnotationBlurDecision(ann) === blurFilter;
               if (frame.frame_index >= fromIndex && matchesBlur) {
                 return { ...ann, status: "accepted" as AnnotationStatus };
               }
@@ -579,7 +585,7 @@ useEffect(() => {
         (existing) =>
           existing?.map((sample) =>
             sample.frame_index >= fromIndex &&
-            (blurFilter === "all" || sample.blur_decision === blurFilter)
+            (blurFilter === "all" || getSampleBlurDecision(sample) === blurFilter)
               ? { ...sample, status: "unreviewed" }
               : sample
           ) ?? existing
@@ -594,8 +600,7 @@ useEffect(() => {
             }
             const annotations = frame.annotations.map((ann) => {
               const matchesBlur =
-                blurFilter === "all" ||
-                ((ann as Annotation & { blur_decision?: string }).blur_decision ?? null) === blurFilter;
+                blurFilter === "all" || getAnnotationBlurDecision(ann) === blurFilter;
               if (frame.frame_index >= fromIndex && matchesBlur && ann.status === "abandoned") {
                 return { ...ann, status: "unreviewed" as AnnotationStatus };
               }

@@ -1,7 +1,7 @@
 import clsx from "clsx";
 import { useMemo } from "react";
 
-import type { TrackSample } from "../types";
+import type { BlurDecision, TrackSample } from "../types";
 
 export type BlurFilterValue = "all" | "sharp" | "blurry";
 
@@ -21,6 +21,10 @@ const BLUR_FILTER_OPTIONS: Array<{ label: string; value: BlurFilterValue }> = [
   { label: "Sharp", value: "sharp" },
   { label: "Blurry", value: "blurry" },
 ];
+
+function resolveBlurDecision(sample: TrackSample): BlurDecision | null {
+  return sample.blur_decision ?? sample.blur_metrics?.blur_decision ?? null;
+}
 
 interface TrackSamplesProps {
   samples: TrackSample[];
@@ -158,6 +162,8 @@ function PatchCard({ sample, onSelect, highlightedKey }: PatchCardProps): JSX.El
 
   const imageSource = sample.patch_image_url ?? sample.image_url ?? "";
 
+  const blurDecision = resolveBlurDecision(sample);
+
   return (
     <button
       type="button"
@@ -202,17 +208,17 @@ function PatchCard({ sample, onSelect, highlightedKey }: PatchCardProps): JSX.El
           {Math.round(sample.bbox.width)}×{Math.round(sample.bbox.height)}
         </span>
       </div>
-      {sample.blur_decision && (
+      {blurDecision && (
         <div className="mt-1">
           <span
             className={clsx(
               "inline-flex items-center rounded-full px-1.5 py-0.5 text-[9px] font-medium",
-              sample.blur_decision === "sharp"
+              blurDecision === "sharp"
                 ? "bg-emerald-500/10 text-emerald-300 border border-emerald-400/40"
                 : "bg-amber-500/10 text-amber-300 border border-amber-400/40"
             )}
           >
-            {sample.blur_decision.toUpperCase()}
+            {blurDecision.toUpperCase()}
           </span>
         </div>
       )}
