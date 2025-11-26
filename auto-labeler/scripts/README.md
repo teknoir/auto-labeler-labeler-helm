@@ -1,10 +1,16 @@
 # Ingesting new tracks
 
-`kubectl -n dataset-curation port-forward svc/auto-labeler-mongo 27017:27017`
+setup port forwarding to connect to the mongo instance
+```bash
+kubectl -n dataset-curation port-forward svc/auto-labeler-mongo 27017:27017
+```
 
-make sure you are using a coco export with 'blur'
-`python ingest_batch.py --generate-patches --limit 10 --tracks-per-batch 50 --batch-prefix tablet4 --labels-path ~/Downloads/labels_with_blur.json --mongo-uri 'mongodb://teknoir:teknoir123456!@localhost:27017/auto_label_labeler?authSource=admin' gs://dataset-curation.teknoir.cloud/media/victra_tablet4_coco`
+make sure you are using a coco export (e.g. labels_with_blur.json) with 'blur'). Use `--limit 10` to test a few images. If you don't use a labels file with `blur_metrics.blur_decision`, none of the images will load. see `https://storage.cloud.google.com/dataset-curation.teknoir.cloud/media/victra_tablet4_coco/labels_with_blur.json?authuser=3` for an example
 
+
+```bash
+python ingest_batch.py --generate-patches --tracks-per-batch 25 --batch-prefix tablet4 --labels-path ~/Downloads/labels_with_blur.json --mongo-uri 'mongodb://teknoir:teknoir123456!@localhost:27017/auto_label_labeler?authSource=admin' gs://dataset-curation.teknoir.cloud/media/victra_tablet4_coco
+```
 
 # Exporting Completed Tracks
 
