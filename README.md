@@ -65,7 +65,7 @@ To archive reviewer output, run the bulk export helper. The script handles
 port-forwarding and writes one JSON file per batch with completed tracks.
 
 ```bash
-./auto-labeler/setup_export.sh
+./auto-labeler/scripts/export_batches.sh
 ```
 
 See `auto-labeler/scripts/README.md` for environment overrides (e.g. limiting to
