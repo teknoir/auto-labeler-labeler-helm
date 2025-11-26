@@ -1,3 +1,11 @@
+# Ingesting new tracks
+
+`kubectl -n dataset-curation port-forward svc/auto-labeler-mongo 27017:27017`
+
+make sure you are using a coco export with 'blur'
+`python ingest_batch.py --generate-patches --limit 10 --tracks-per-batch 50 --batch-prefix tablet4 --labels-path ~/Downloads/labels_with_blur.json --mongo-uri 'mongodb://teknoir:teknoir123456!@localhost:27017/auto_label_labeler?authSource=admin' gs://dataset-curation.teknoir.cloud/media/victra_tablet4_coco`
+
+
 # Exporting Completed Tracks
 
 The `export_via_api.py` helper automates pulling completed annotation tracks
